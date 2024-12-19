@@ -1,0 +1,1559 @@
+---
+title: "Metabolomics Practical"
+author: "Pierre Wensel"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    highlight: default
+    number_sections: true
+    theme: readable
+    toc: true
+    toc_depth: 2
+    toc_float: true
+  pdf_document:
+    toc: true
+    toc_depth: '2'
+---
+
+#EXERCISE 1.1: Summarize in your own words the biological background as per described in Pristner M, et al. 
+
+Part 1 answers are based on scientific evidence cited from the relevent publication:
+"Neuroactive metabolites and bile acids are altered in extremely premature infants with brain injury"
+Manuel Pristner, Daniel Wasinger, David Seki, Katrin Klebermaß-Schrehof, Angelika Berger, David Berry, Lukas Wisgrill, Benedikt Warth
+medRxiv 2023.05.17.23290088; doi: https://doi.org/10.1101/2023.05.17.23290088
+Now published in Cell Reports Medicine doi: 10.1016/j.xcrm.2024.101480
+
+The experimental design and biological background is as follows: 
+The gut microbiome is associated with pathological neurophysiological evolvement in extremely premature infants suffering from brain injury. To elucidate the early-life biological phenomeno involved,the plasma and fecal metabolome of a cohort of 51 extremely premature infants with brain injury and the correlation with gut microbiome and immunological data was studied via liquid chromatography (LC)-high-resolution mass spectrometry (MS)-based untargeted metabolomics  and LC-MS/MS-based targeted analysis. For our specific analysis, 75 fecal samples that were collected at 3 different time points (i.e. 7 days, 28 days, and term_age) were analyzed, along with 34 QC samples, using hydrophillic chromatography-negative ion mode ESI MS and MS/MS.An early onset of differentiation in neuroactive metabolites between infants with and without brain injury and several bacterially derived bile acid amino acid conjugates in plasma and feces were detected. 
+
+#EXERCISE 1.2: What type of metabolomic approaches were used to analyse the fecal samples? Were they untargeted or a targeted? 
+
+Both targeted and untargeted approaches were used to analyze fecal samples.Targeted metabolomics applies methods that have been optimized to quantify a defined set of molecules, and such approach is well suited for research questions that require measuring all of a small number of analytes in a sample (e.g., does this drug affect a specific pathway of interest? do these samples contain a given pesticide? is this compound a marker for a particular phenotype?). Targeted metabolomics apply tandem mass spectrometers like triple quadrupoles (QqQ)to quantitate less than a few dozen compounds, but some workflows have been developed to monitor several hundred metabolites.
+
+#EXERCISE 1.3: For the untargeted analysis, what type of chromatography was used? Was it normal and/or reverse phase? 
+
+For untargeted analysis, both (normal) Hydrophillic and (relatively more hydrophobic) reverse-phase chromatography were used
+Two columns, a HILIC column(SeQuant ZIC-pHILIC; 5um, 150x2.1mm) and a RP column (Waters Acquity HSST3; 1.8um,100x2.1mm) were used for complementary and broad coverage of analytes.
+
+#EXERCISE 1.4: What type of MS-instrument was used in either case? 
+
+For untargeted metabolomics:VAnquish UHPLC system coupled to a QExactive HF quadrupole-Orbitrap(Thermo) mass spectrometer
+via an ESI interface was used. For targeted metabolomic, TSQ Vantage Triple Quadrupole mass spectrometer (Thermo) via an ESI interface was used
+This is later confirmed below via the following code: 
+mbank_sub[2]$instrument
+[1] "LTQ Orbitrap XL, Thermo Scientfic; HP-1100 HPLC, Agilent"
+
+#EXERCISE 1.5 What type of ionization and ionization modes were used? 
+
+Electro-spray ionionization (ESI) was used and negative ionization mode (polarity=0) were used.
+Later Confirm polarity used for acquisition:
+polarities <- table(mz.conditions$polarity)
+head(polarities)
+0-negative, 1-positive, -1=unkown
+0L for negative polarity, 1L for positive polarity
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#Prepare Session
+
+#Install auxiliary packages from CRAN, Biocinductor, or github
+
+#if(!requireNamespace("devtools")){
+#  install.packages("devtools")}
+#devtools::install_github("RogerGinBer/RHermes")
+#if (!require("BiocManager", quietly = TRUE))
+#  install.packages("BiocManager")
+#BiocManager::install("msdata")
+#BiocManager::install("xcms")
+#BiocManager::install("cliqueMS")
+#BiocManager::install("Spectra")
+#BiocManager::install("MetaboAnnotation")
+#BiocManager::install("AnnotationHub")
+#BiocManager::install("MsBackendMsp")
+#BiocManager::install("MSnbase")
+#BiocManager::install("faahKO")
+#BiocManager::install("cliqueMS")
+#BiocManager::install("CompoundDb")
+#devtools::install_github("osenan/cliqueMS")
+#install.packages("cliqueMS")
+#install.packages("tidyverse")
+#install.packages("RColorBrewer")
+#install.packages("enviPat")
+#intall.packages("plotly")
+
+#Load libraries
+library(ggfortify) 
+library(stringr)
+library(data.table)   
+library(stringr) 
+library(msdata)
+library(pander)
+library(xcms)
+library(faahKO)
+library(RColorBrewer)
+library(pheatmap)
+library(MsExperiment)
+library(MSnbase)
+library(tidyverse)
+library(Biobase) 
+library(plotly)
+library(xcms)
+library(cliqueMS)
+library(enviPat)
+library(AnnotationHub)
+library(MsBackendMsp)
+library(stringr)
+library(CompoundDb)
+library(MetaboAnnotation)
+library(faahKO)
+library(Spectra)
+library(Spectra)
+library(pheatmap)
+
+#Alternatively load libraries this way:
+#Packages.S4 <- c()
+#lapply(Packages.S4, library, character.only = TRUE)
+data("isotopes")
+data("adducts")
+
+#Data importation
+
+#Change file path
+path.mzML <- "C:/Users/User/Desktop/R/Metabolomics/Metabolomics/MS1" 
+#List .mzML files contained in working directory
+mzML.files <- list.files(path.mzML, pattern= ".mzML", recursive=T, full.names = T)
+
+#Create phenodata dataframe from this working directory 
+pheno <- phenoDataFromPaths(mzML.files)
+#Read open MS data (.mzML files) with readMSData function from the MSnbase package
+raw_data <- readMSData(files = mzML.files,pdata = new("NAnnotatedDataFrame", pheno), mode = "onDisk")
+
+```
+
+#EXERCISE 2.1: How many replicates were measured for each time point? (Refer to s_MTBLS7560.txt in Metabolight for the experimental desing) 
+#How many experimental groups are there?. Determine the number of samples per group. 
+
+There are 7 experimental groups ("CTR_day28" "CTR_day7" "CTR_termage" "PAT_day28" "PAT_day7" "PAT_termage" "QC"), each have, respectively
+31, 4, 13, 11, 8, 8, and 34 replicates measured for each time point or QC. This was determined and confirmed by by the following rationale and code:
+By referring to cited scientification publication and associated file s_MTBLS7560.txt in Metabolight, I organized the downloaded samples via
+the following directory:
+
+#feces_ID_1	day_7			PAT
+#feces_ID_2	day_7			CTR
+#feces_ID_3	day_7			PAT
+#feces_ID_4	day_7			PAT
+#feces_ID_5	day_7			PAT
+#feces_ID_6	day_7			PAT
+#feces_ID_7	day_7			CTR
+#feces_ID_8	day_7			PAT
+#feces_ID_9	day_7			CTR
+#feces_ID_10	day_7			CTR
+#feces_ID_11	day_7			PAT
+#feces_ID_12	day_7			PAT
+#feces_ID_13	day_28			CTR
+#feces_ID_14	day_28			PAT
+#feces_ID_15	day_28			CTR
+#feces_ID_16	day_28			PAT
+#feces_ID_17	day_28			PAT
+#feces_ID_18	day_28			CTR
+#feces_ID_19	day_28			CTR
+#feces_ID_20	day_28			CTR
+#feces_ID_21	day_28			CTR
+#feces_ID_22	day_28			CTR
+#feces_ID_23	day_28			CTR
+#feces_ID_24	day_28			CTR
+#feces_ID_25	day_28			CTR
+#feces_ID_26	day_28			CTR
+#feces_ID_27	day_28			CTR
+#feces_ID_28	day_28			CTR
+#feces_ID_29	day_28			CTR
+#feces_ID_30	day_28			CTR
+#feces_ID_31	day_28			CTR
+#feces_ID_32	day_28			CTR
+#feces_ID_33	day_28			PAT
+#feces_ID_34	day_28			CTR
+#feces_ID_35	day_28			CTR
+#feces_ID_36	day_28			CTR
+#feces_ID_37	day_28			CTR
+#feces_ID_38	day_28			PAT
+#feces_ID_39	day_28			CTR
+#feces_ID_40	day_28			CTR
+#feces_ID_41	day_28			PAT
+#feces_ID_42	day_28			PAT
+#feces_ID_43	day_28			CTR
+#feces_ID_44	day_28			CTR
+#feces_ID_45	day_28			PAT
+#feces_ID_46	day_28			CTR
+#feces_ID_47	day_28			PAT
+#feces_ID_48	day_28			CTR
+#feces_ID_49	day_28			CTR
+#feces_ID_50	day_28			CTR
+#feces_ID_51	day_28			CTR
+#feces_ID_52	day_28			PAT
+#feces_ID_53	day_28			CTR
+#feces_ID_54	day_28			PAT
+#feces_ID_55	term_age			CTR
+#feces_ID_56	term_age			PAT
+#feces_ID_57	term_age			CTR
+#feces_ID_58	term_age			PAT
+#feces_ID_59	term_age			CTR
+#feces_ID_60	term_age			CTR
+#feces_ID_61	term_age			CTR
+#feces_ID_62	term_age			PAT
+#feces_ID_63	term_age			PAT
+#feces_ID_64	term_age			CTR
+#feces_ID_65	term_age			PAT
+#feces_ID_66	term_age			PAT
+#feces_ID_67	term_age			CTR
+#feces_ID_68	term_age			CTR
+#feces_ID_69	term_age			CTR
+#feces_ID_70	term_age			PAT
+#feces_ID_71	term_age			PAT
+#feces_ID_72	term_age			CTR
+#feces_ID_73	term_age			CTR
+#feces_ID_74	term_age			CTR
+#feces_ID_75	term_age			CTR
+#feces_targeted_reverse_Matrix
+#feces_targeted_reverse_QC
+#feces_targeted_reverse_Blank
+#feces_untargeted_hilic_Process_blank_1
+#feces_untargeted_hilic_Process_blank_2
+#feces_untargeted_hilic_Process_blank_3	
+#feces_untargeted_hilic_QC
+#feces_untargeted_hilic_Solvent_blank
+#feces_untargeted_hilic_Solvent_blank_carry_over
+#feces_untargeted_hilic_SRM
+#feces_untargeted_hilic_STD_mix
+#feces_untargeted_reverse_Process_blank_1
+#feces_untargeted_reverse_Process_blank_2
+#feces_untargeted_reverse_Process_blank_3
+#feces_untargeted_reverse_QC
+#feces_untargeted_reverse_QC_cond
+#feces_untargeted_reverse_Solvent_blank
+#feces_untargeted_reverse_Solvent_blank_carry_over
+#feces_untargeted_reverse_SRM	
+#feces_untargeted_reverse_STD_mix
+
+
+```{r cars1}
+#The number of groups and replicates are confirmed as follows:
+pData(raw_data)$class
+table(pData(raw_data)$class)
+class(raw_data$class)
+nlevels(raw_data$class)
+length(unique(raw_data$class))
+levels(pData(raw_data)$class)
+#Convert Single Factor Vector to Character Vector
+character_vector <- as.character(raw_data$class) 
+character_vector
+#Run Length Encoding
+rle(sort(character_vector))
+```
+
+ 
+#EXERCISE 2.2 How much did the entire chromatographic run span for each of them?  
+For ALL samples combined, chromatography was recorded from 0:00 to 15:01 minutes (We later calculate chromatographic run time for EACH sample)
+Confirmed via the “XCMSnExp” S4 object raw_data (also xdata the xcms S4 object) 
+```{r cars2}
+raw_data
+#Confirmed as follows:
+#Retention times of all spectra 
+head(rtime(raw_data))
+
+```
+
+#ADDITIONAL PREMINARY DATA EXPLORATION TO PROVIDE RATIONALE TO ANSWERS FOR LATER EXERCISES
+```{r cars3}
+
+#Explore rawData "onDisk" object (S4 object serving as abstraction of MS data)
+class(raw_data)
+dim(raw_data)
+head(raw_data)
+#str(raw_data)
+raw_data$class
+#spectra(raw_data)
+## Extracting individual spectra or a subset is much faster.
+#spectra(raw_data[1:50])
+class(pheno)
+dim(pheno)
+head(pheno)
+# Get length of data (total number of spectra)
+length(raw_data)
+#Get the MS level
+head(msLevel(raw_data))
+## Get featureData, use fData to return as a data.frame
+head(fData(raw_data))
+#which file the spectra are
+head(fromFile(raw_data))
+#file names:
+head(fileNames(raw_data))
+## Scan index and acquisitionNum
+head(scanIndex(raw_data))
+head(acquisitionNum(raw_data))
+#Retention times of all spectra 
+#head(rtime(raw_data))
+# Get the polarity of spectra.
+head(polarity(raw_data))
+
+
+#Extract intensities and M/Z values per spectrum, returning a list, each element representing the values for one spectrum.
+#head(intensity(raw_data))
+#head(mz(raw_data))
+#Spectra are organized sequentially (i.e., not by file) but the fromFile() function is used to get for each spectrum 
+#the information to which of the data files it belongs. Below we simply count the number of spectra per file.
+table(fromFile(raw_data))
+#Total number MS spectra these files contained and proportions of them as MS and MS/MS spectra:
+mz.conditions <- MSnbase::fData(raw_data)
+head(mz.conditions)
+class(mz.conditions)
+dim(mz.conditions)
+head(mz.conditions)
+ms_levels <- table(mz.conditions$msLevel)
+head(ms_levels)
+#103099 MS1 and 4168 MS2 (MS/MS)
+#Collision energies for fragmentation of pre-cursor ions for MS/MS data 
+ce <- table(mz.conditions$collisionEnergy)
+head(ce)
+#So 4168 MS/MS spectra were measured with 30eV
+#Explore rawData "onDisk" object
+#m/z range acquired:
+min(raw_data@featureData@data$lowMZ)
+max(raw_data@featureData@data$highMZ)
+#MS-acquisition mode:
+table(table(raw_data@featureData@data$msLevel))
+polarities <- table(mz.conditions$polarity)
+head(polarities) #EXERCISE 1.5
+```
+#EXERCISE 2.3: Plot total ion chromatograms for all samples and color-code them according to different fecal collection time points. 
+
+Please refer to Figure 1 and associated rationale and code below:
+```{r cars4}
+#The chromatogram() method returns a MChromatograms object that organizes individual Chromatogram objects containing the chromatographic data 
+#in a 2-D array: columns represent samples and rows (optionally) m/z and/or retention time ranges. To create a total ion chromatogram aggregationFun is set to "sum", and for the base peak chromatogram (BPC) 
+#for each file in our experiment, aggregationFun is set to "max" to return for each spectrum the maximal intensity and hence create the BPC from the raw data. )
+
+TICs <- chromatogram(raw_data, aggregationFun = "sum") 
+# Plot according to experimental groups of different fecal collection time points
+group_colors <- brewer.pal(7, "Dark2")[1:length(levels(pData(raw_data)$class))]
+names(group_colors) <- levels(pData(raw_data)$class)
+plot(TICs, col = group_colors[raw_data$class], main = "TIC")
+#FIGURE 1
+
+#Most peaks are eluted early at < 230 seconds, suggesting need to explore appropriate chromatography column resins
+#Due to the complexity of chemical matrices, short chromatographic times, and poor LC/MS chromatographic resolution, 
+#TIC usually represents an envelop of metabolites overlap. Thus, TICs only allows an overview of the technical measurements 
+#performance with no inferred biological insights.
+
+#Comparing TIC intensities from samples entering study to identify potential technical outliers:
+tc <- split(tic(raw_data), f = fromFile(raw_data))
+boxplot(tc, col = group_colors[raw_data$class],ylab = "intensity", names = row.names(pheno),main = "Total ion current")
+#FIGURE 2
+
+#Evidently , the initial QC samples 1-9, 22, 29 are outliers with no detected ion current. I will not later include these
+#in subset of QC samples for xcms retention time alignment step.
+```
+#EXERCISE 2.4:Extract Tryptophan ion chromatogram ([M-H]-) (hint: retention time ~ 2.99 minutes). 
+#Which sample does apparently hold higher levels of Tryptophan?. Plot the extracted ion chromatogram for this sample.
+#Can you confirm this peak being Tryptophan from MS1 data? Please refer to Figure for the extracted trypophan ion chromatogram.
+
+Using two different approaches, the sample apparently holding higher levels of tryptophan was determined to be either 
+CTR_day28 sample with file index 3 and sample file ID 034_ID_18.mzM(more likely) or 
+CTR_day7 sample with file index 32 and sample file ID 027_ID_2.mzML (highest base peak intensity)
+I cannot confirm that this peak is tryptophan from MS1 data. Only elemental composition can be inferred.
+I infer formula for element composition from intact ion but MS2 fragmentation is needed to elucidate and determining molecular structure 
+for ultimate identification with higher-level certainty.Although the precursor m/z of our MS1 spectra matches the m/z of tryptophan, until we examine further as in Exercise 2.5, we can still not exclude that their MS/MS (MS2) spectra represent fragments of ions from different compounds (with the same m/z than tryptophan).Please refer to code below for rationale:
+```{r cars5}
+#I extracted XIC for tryptophan [M+H]- considering a 10 ppm error window and retention time ~ 2.99 minutes: 
+#The following preliminary Centwave parameters ONLINE default parameters were obtained from the url https://xcmsonline.scripps.edu/landing_page.php?pgcontent=mainPage
+#and course tutorial. 
+cw_onlinexcms_default <- CentWaveParam(ppm = 15, peakwidth = c(5, 20), 
+                                       snthresh = 6, prefilter = c(3, 100), 
+                                       mzCenterFun = "wMean", integrate = 1L,
+                                       mzdiff = -0.001, fitgauss = FALSE, 
+                                       noise = 0, verboseColumns = FALSE, 
+                                       roiList = list(), firstBaselineCheck = TRUE, 
+                                       roiScales = numeric())
+
+#However, as instructed for this exercise, I  adhered to the following author parameters obtained from the following scientific publication by authors Pilsner et al:
+#Neuroactive metabolites and bile acids are altered in extremely premature infants with brain injury
+#Manuel Pristner, Daniel Wasinger, David Seki, Katrin Klebermaß-Schrehof, Angelika Berger, David Berry, Lukas Wisgrill, Benedikt Warth
+#doi: https://doi.org/10.1101/2023.05.17.23290088
+#Published in Cell Reports Medicine doi: 10.1016/j.xcrm.2024.101480
+
+#Based on authors publication, "all experimental sampling time points from their respective biological matrix were processed together. 
+#Data pre-processing was done using the R (4.1) package XCMS80 (3.14), starting with the import of the mzXML files. 
+#The next step was peak detection using the centWave algorithm (parameters: ppm = 5, peakwidth = 5/15; snthresh = 10, prefilter = 3/5000) 
+#followed by the removing of peaks with a too wide peak width":
+
+cw_authorsxcms_default <- CentWaveParam(ppm = 5, peakwidth = c(5, 15), 
+                                        snthresh = 10, prefilter = c(3, 5000), 
+                                        mzCenterFun = "wMean", integrate = 1L,
+                                        mzdiff = -0.001, fitgauss = FALSE, 
+                                        noise = 0, verboseColumns = FALSE, 
+                                        roiList = list(), firstBaselineCheck = TRUE, 
+                                        roiScales = numeric())
+
+#Define the rt and m/z range of the tryptophan peak 
+#Found monoisotopic mass for tryptophan and defined [M+H]- adduct:
+#Because of negative ionization mode, the proton mass is substracted from monoisotopic mass
+M <- 204.089877638 # monoisotopic molecular weight mass from https://hmdb.ca/metabolites/HMDB0030396
+H <- 1.007276
+M_H <- M-H
+
+## Define tryptophan peak mz range considering 10 ppm error
+error <- 10 #ppm
+mmu_min <- M_H-(error*M_H/1e6)
+mmu_max <- M_H+(error*M_H/1e6)
+mzr <- c(mmu_min, mmu_max)
+
+#Define tryptophan peak rt range width with minute to second unit conversion
+apex.tryptophan<-2.99*60
+#Using author parameters
+rt.window <- cw_authorsxcms_default@peakwidth[2] #max rt width in seconds from course tutorial
+rtr <- c(apex.tryptophan-rt.window, apex.tryptophan+rt.window)
+
+raw_data |> filterRt(rt = rtr) |> filterMz(mz = mzr) |> chromatogram(aggregationFun = "max")|>plot()
+#Right shoulder of peaks in all that is visible. 
+#Maybe retention time settings with peakwidth[2] is inappropriate?
+
+#raw_data |> filterRt(rt = rtr) |> filterMz(mz = mzr) |> chromatogram(aggregationFun = "max")|>plot(type = "XIC")
+#Error in plot.xy(xy, type, ...) : invalid plot type 'X'
+#m/z values of the individual centroids (lower panel) in the plots above would scatter around the real m/z value of the compound 
+#(in an intensity dependent manner).ROIs are defined based on the difference of m/z values of centroids from consecutive scans (spectra). 
+#Centroids from consecutive scans are included into a ROI if the difference between their m/z and the mean m/z of the ROI is smaller
+#than the user defined ppm parameter. A reasonable choice for the ppm could thus be the maximal m/z difference of data points from 
+#neighboring scans/spectra that are part of a chromatographic peak for an internal standard of known compound.
+
+#Because the last tryptophan ion chromatogram was not representative, I then used instead default Centwave
+#parameters and wider retention time window of +=50 seconds to extract XIC for tryptophan [M+H]- to improve plot
+
+#Getting default parameters
+CentWaveParam()
+
+# Define error in ppm and the mz range
+error <- 10 #ppm
+mmu_min <- M_H-(error*M_H/1e6)
+mmu_max <- M_H+(error*M_H/1e6)
+mzr <- c(mmu_min, mmu_max)
+
+#Assume retention time corresponds with apex peak:
+apex.tryptophan<-2.99*60
+ahigh<-apex.tryptophan+50
+alow<-apex.tryptophan-50
+ahigh
+alow
+rt = c(alow, ahigh)
+
+#Extracting and plotting XIC for Tryptophan with max and black and white images
+raw_data |> filterRt(rt = c(alow, ahigh)) |> filterMz(mz = mzr) |> chromatogram(aggregationFun = "max")|>plot()
+#FIGURE 3
+#This chromatogram looks much better. In hindsight, I should have additionally tested author centwave parameters with this
+#new retention time window, but I ran out of time and did not.
+
+#Extracting and plotting XIC for Tryptophan again in color-coded images 
+group_colors <- brewer.pal(7, "Dark2")[1:length(levels(pData(raw_data)$class))]
+names(group_colors) <- levels(pData(raw_data)$class)
+chr_tryptophan <- chromatogram(raw_data, mz = mzr, rt = c(alow, ahigh))
+plot(chr_tryptophan, col = group_colors[chr_tryptophan$class], lwd = 2)
+#FIGURE 4
+#This chromatogram also looks much better. 
+
+#Determining which sample yields XIC for Tryptophan with highest intensity 
+#Subsetting with filters for retnetion time and mz range
+raw_data_sub<-filterRt(raw_data, rt = c(alow, ahigh))
+raw_data_sub<-filterMz(raw_data_sub, mz = mzr)
+raw_data_chrom<-chromatogram(raw_data_sub,aggregationFun = "max") #RENAME FOR TRYPTOPHAN?
+
+#Iterate through all samples
+my_vector = 1:109
+filename1<-(fileNames(raw_data_sub))[which.max(sapply(my_vector, function(x) max(intensity(raw_data_chrom[1,x])[!is.na(intensity(raw_data_chrom[1,x]))])))]
+filename1
+
+#Sample has file index 3, but we need the SAMPLE ID:
+#Print row where filename substring is found in rownames of pheno dataframe
+sub1<-str_extract(filename1, "[0-9][0-9][0-9]")
+row1<-pheno[str_detect(rownames(pheno), sub1), ]
+row1
+#CTR_day28 sample with file index 3 and sample ID 034_ID_18.mzML has highest intensity for tryptophan 
+
+#Plot this single peak using its obtained file index of 3
+plot(raw_data_chrom[1,3])
+#FIGURE 5
+
+#Altenatively, obtain sample with XIC with highest intensity for tryptophan as follows:  
+## Using fData to get and return as a data.frame to access beasePeakIntensity variable
+eddie<-(fData(raw_data_sub))
+max_eddie<-eddie[eddie$basePeakIntensity == max(eddie$basePeakIntensity), ] 
+#Get file index again:
+filename2<-(fileNames(raw_data_sub))[max_eddie$fileIdx]
+filename2
+#Sample has file index 3, but we need the SAMPLE ID:
+
+#Printing row where filename substring is found in rownames of pheno dataframe
+sub2<-gsub(".*([0-9][0-9][0-9][0-9]*_.*mzML).*", "\\1", filename2)
+sub22<-substring(sub1, 1, 8)
+sub22
+#Print row where substring is found in rownames of pheno dataframe
+#row2<-pheno[str_detect(rownames(pheno), sub22), ]
+row2<-pheno[rownames(pheno) %like% sub22, ] 
+row2
+#CTR_day7 sample with file index 32 and sample file ID 027_ID_2.mzML has highest intensity for tryptophan
+
+#Plot this single peak using its obtained file index of 32
+plot(raw_data_chrom[1,32])
+#FIGURE 6
+#This appears to be lower in intensity than the first peak. 
+#Therefore, I  assume that the first tryptophan maximum intensity peak with file index=3 is the correct peak.
+
+```
+#EXERCISE 2.5 Read MS/MS spectrum for Tryptophan from samples in MS/MS (acquired in HILIC ESI(-), [M-H]- ) and compare to those 
+#MS/MS spectra tabulated on public libraries. Compute similarity scores and comment on it. Which level of ID would you 
+#be obtaining with these empirical data? Reason your responses. Do the same for uracil and aspartic acid. 
+
+In addition to high-scoring matches between my empirical tryptophan MS/MS spectra and those of NIST, MassBank, and HMDB, 
+the authors in their scientific publication "observed metabolic changes at the pathway level Enriched metabolic pathways and their combined p values for (A) plasma, (B) feces, and (C) their intersection.logfold increase change of tryptophan observed in feces termage but not detected in 7 and 28 days".The Authors also observe "significant alterations between groups, including uracil (ICL = 1, p = 0.041,FC-log2 = 3.4) on day 7 feces. Furthermore, the authors observed "significant negative correlations with the neurotransmitter GABA (ICL = 1)
+and N-acetyl-L-aspartic acid (ICL = 1), the precursor of the neuronal dipeptide N-acetylaspartylglutamate, and  N-acetyl-L-aspartic acid (ICL = 1) 
+was correlated with Enterococcus". As explained below in greater detail, based on (1) the authors' observations in their peer-reviewed scientific publication, (2) high MS/MS spectral matches (93.4% similarity score) and similiar intensity distributions between those of my empirical spectra and 
+those from with those of NIST, HMDB, and MassBank (93.4% similarity score), and (3) previously demonstrated correspondence with XIC pre-cursor MS1 ion chromotagram peak, I conclude with level 2 certainty that the previous MS1 pre-cursor chromatogram peak represented elemental composition of tryptophan and that the corresponding MS2 spectra represents all the major MS2 fragments that confirm the structure and identity of tryptophan in the fecal samples. I have lower level of certainty for L-aspartic acid (35% similarity score with MassBank spectra), and even lower level-certainty for uracil due to extremely low similarity scores against MassBank MS spectral library. These low scores are potentially attributed to inappropriate selection of retention time width as explained before, my varied and inconsistent use of different ppm values for the compareSpectra and filterPrecursorMzValues() methods, differences in collision energies and/or Mass Spectrometer instrumentation, batch-effects, procedures, and other conditions. THis can also be attributed to the uncertainty around the negative or positive nature of ionization of acids like L-aspartic acid.Please refer to approach and code writtn below for this comparison of spectra:
+
+```{r cars6}
+#For these 3 metabolites, I will refer to the following confidence Levels of Metabolite identification: 
+#Confidence levels:
+#Level 4: Unknown; spectral data
+#Level 3: Putatively characterised compound classes; Spectral data showing similarity to known compounds of a 
+#chemical class (i.e., reporter ions of polar head of PC, flavonoids ring structure and so on)
+#Level 2: Putatively annotated structure; As for levels 3 and 4, including spectral similarity with public or commercial libraries
+#Level 1: Identified compounds; a minimum of two orthogonal analytical techniques applied to the analysis 
+#of both the metabolite of interest and to a chemical reference standard of suspected structural equivalence,
+#with all analyses performed under identical analytical conditions (Compare MS/MS and RT to a known compound model)
+
+#Extracting MS/MS spectrum for tryptophan, uracil, and L-aspartic acids+ at collision energy CE= 40 eV which is previously determined via code. 
+#Then comparing these with spectrum tabulated in NIST subscription-based library and public libraries (MAssBank, HMDB)
+
+#Data import
+#Change file path accordingly!!
+path_mzXML_MS2 <- "C:/Users/User/Desktop/R/Metabolomics/Metabolomics/MS2" 
+#Listing all 18 MS/MS .mzXML files (NOTE: NOT mzML!!) contained in my MS2 working directory
+mzXML_files_MS2 <- list.files(path_mzXML_MS2, pattern= ".mzXML", recursive=T, full.names = T)
+
+#Create a phenodata dataframe from this working directory structure
+pheno_MS2 <- phenoDataFromPaths(mzXML_files_MS2)
+#Read open MS data (.mzML files) with readMSData function from the MSnbase package.
+raw_data_MS2 <- readMSData(files = mzXML_files_MS2,pdata = new("NAnnotatedDataFrame", pheno_MS2), mode = "onDisk")
+
+#Preliminary data exploration:
+#Total MS spectra these files contained and proportions of them as MS and MS/MS spectra:
+mz.conditions2 <- MSnbase::fData(raw_data_MS2)
+ms_levels2 <- table(mz.conditions2$msLevel)
+ms_levels2
+
+#The polarity used for acquisition 
+polarities2 <- table(mz.conditions2$polarity)
+head(polarities2)
+
+#Collision energies for MS/MS data:
+ce2 <- table(mz.conditions2$collisionEnergy)
+head(ce2)
+
+###################TRYPTOPHAN#######################################################################################################
+### Although the precursor m/z of our MS1 spectra matches the m/z of tryptophan, we can still not exclude that they represent fragments 
+#of ions from different compounds (with the same m/z than tryptophan).We find the scan where precursor MZ correspond to TRYPTOPHAN adduct:
+
+#Defining tryptophan parameters
+#Filtering on pre-cursor with maximum intensity at collision energy
+#Tryptophan monoisotopic mass obtained from HMDB website https://hmdb.ca/metabolites/HMDB0030396
+M <- 204.089877638 
+H <- 1.007276
+M_H <- M-H
+# Note retention time window is rt.window <- cw_authorsxcms_default@peakwidth[2] from hands-on tutorial, rather than the previously attempted window of +-50 
+# which visually resulted in appropriate plot of chromatogram. Here, I re-attempted wide window of +-50 but but this did not yield high correlation score here.
+apex.tryptophan<-2.99*60
+rt.window <- cw_authorsxcms_default@peakwidth[2] #max rt width in seconds
+rtr <- c(apex.tryptophan-rt.window, apex.tryptophan+rt.window)
+
+spID1 <- mz.conditions2 |> filter(round(precursorMZ) == 203 & collisionEnergy == 40) |> slice_max(totIonCurrent) |> pull(spIdx)
+
+#Plotting and comparing it FIRST to tabulated tryptophan spectrum in the NIST library
+
+ggplotly(plot(raw_data_MS2[[spID1]]))
+
+#FIGURE 7
+
+#Comparing MS/MS tryptophan spectra with that at the following nist url: https://webbook.nist.gov/cgi/cbook.cgi?ID=C54126&Mask=200
+#Pre-cursor ion was 203.08 in mass
+#NIST M/Z peaks that were present in my spectra but in lower proportion abundance: 51,77,117,103,204,159,130,142
+#NIST M/Z peaks that were absent in my spetra 103
+#M/Z peaks that were present in my spectra but not in NIST spectra:180
+
+#Additionally, my MS/MS tryptophan spectra compared well visually with spectra obtained at following hmdb url:https://hmdb.ca/metabolites/HMDB0030396
+#Additionally, I used Spectra and AnnotationHub packages to compare against MassBank spectra as follows:
+#For features identification.MS2 spectra associated with LC-MS features from the untargeted LC-MS/MS experiment will be  matched against andsimilaroty-scored 
+#with other public spectral reference libraries (i.e.MassBank retrieved using Bioconductor’s AnnotationHub package, MassBank of North America MoNa, Human Metabolom Database HMDB, GNPS)
+#This can allows reaching Level 2 ID confidence, i.e, inferring probable structure from features.
+#We will use Spectra and AnnotationHub packages for level 2 ID of tryptophan using MS/MS spectral data and the MassBank spectral library. 
+#Matching experimental spectra (MS/MS) representing tryptophan against the tryptophan entry in MassBank for tryptophan structural confirmation
+
+#If no MySQL database system is available or if this tutorial can not be run within docker, the MassBank data can also be retrieved from Bioconductor's R Biocpkg("AnnotationHub"). 
+#In that case MsBackendCompDb backend (defined in the r Biocpkg("CompoundDb")) is used instead, but both backends retrieve their data from a SQL database and 
+#have the same properties. Retrieving MassBank spectral data using AnnotationHub package:
+ah <- AnnotationHub()
+query(ah, "tryptophan")
+query(ah, "MassBank")
+
+#Retrieve the respective release (2023.11 in this case) and access its spectra data with the code below. 
+#Note that AnnotationHub will cache the downloaded database locally and any subsequent call will not download the database again.
+mb <- ah[["AH116166"]]
+mbank <- Spectra(mb)
+
+#dev.off()#to fix Error in plot.new() : figure margins too large
+par(mar = c(1, 1, 1, 1))
+mbank_sub <- filterPrecursorMzValues(mbank, mz = M_H, ppm = 10) 
+plotSpectra(mbank_sub, main = mbank_sub$name, labels = function(z) format(mz(z)[[1L]], digits = 6), labelSrt = -30, labelPos = 2, labelOffset = 0.1, ylim = c(0,200))
+#FIGURE 8
+
+#Assumed that this is most likely plot formatting related, but just in case, maybe 1L (positive ionization mode polarity) 
+#be replaced with OL (negative ionization polarity for our experiment?)Calculating the similarity against our empirical spectra 
+#representing tryptophan using compareSpectra function from Spectra package. Filter empirical data according to m/z and rt of tryptophan ion. 
+#As compareSpectra result we got the (normalized dot product) similarity score between each tested MassBank spectrum 
+#(columns) against each experimental spectrum (rows).
+
+#Data Import
+#Re-Accessing MS/MS data in OPEN-SOURCE FILE FORMAT mzXML file:
+#This seems to work with individual file path, not folder directory path like before for MS1 processing. 
+#I am therefore randomly using first file I have as an example
+mz.file <- "C:/Users/User/Desktop/R/Metabolomics/Metabolomics/MS2/MS2_1/Feces_MS2_neg_1.mzXML"
+mz.files <- list.files(path = "C:/Users/User/Desktop/R/Metabolomics/Metabolomics/MS2/MS2_1", full.names = T)
+sps_mzfile <- Spectra(mz.file, source = MsBackendMzR())
+
+# Subset sps_mzfile for tryptophan according to precursor mz and rt (252, 257) seconds, recall
+# appex for tryptophan is at 254. We also filter out peaks below 30% of the intensity of the base peak
+
+low_int <- function(x, ...) {
+  x > max(x, na.rm = TRUE) * 0.30
+}
+
+#Define a function to *normalize* the intensities
+norm_int <- function(x, ...) {
+  maxint <- max(x[, "intensity"], na.rm = TRUE)
+  x[, "intensity"] <- 100 * x[, "intensity"] / maxint
+  x
+}
+
+sps <- filterPrecursorMzValues(sps_mzfile, mz = M_H, ppm = 5) |> filterRt(c(apex.tryptophan-rt.window, apex.tryptophan+rt.window)) |> filterIntensity(intensity = low_int) |> addProcessing(norm_int)
+res<-compareSpectra(sps, mbank_sub, ppm = 20)
+res
+
+#The highest similarity between our spectra and the spectra from MassBank is  max(res). 
+max(res)
+plotSpectraMirror(sps[2], mbank_sub[1], labels = function(z) format(mz(z)[[1L]], digits = 6),labelSrt = -30, labelPos = 2, labelOffset = 0.1)
+
+#FIGURE 9
+
+#Results shows a cosinus similarity score of 94.3% between any of the two Mass Bank tabulated tryptophan spectra and the empirical spectra sps number two. 
+#Matched scores (cosine similarty > 80%) are usually considered as potential MS/MS good matches. 
+#However, closer attention should be paid when interpreting such similarity scores. 
+#We should consider whether experimental conditions in which the empirical spectra was acquired and those used to record the 
+#tabulated spectra are comparable. To explore these conditions the spectra metadata can be accessed as follows:
+
+#Consider the spectral variables available   
+head(spectraVariables(mbank_sub))
+head(spectraVariables(sps))
+
+#Compare between collisions energy
+mbank_sub[2]$collisionEnergy_text
+mbank_sub[2]$instrument
+sps[2]$collisionEnergy
+ 
+#Despite that the instrument was Q-TOF in both cases, the different vendors and CE used can cause different similarity scores
+#Alternatively, subscription payment-based NIST MS/MS entries measured with same instrument and collision energy may in the future show better peaks matching.
+
+#Based on peer-reviewed scientific publication, MS/MS spectal mataches, similar distribution of intensities, correspondence with XIC pre-cursor MS1 ion chromotagram peak, 
+#I conclude with level 2 certainty that the previous MS1 pre-cursor chromatogram peak represented elemental composition and that the 
+#corresponding MS2 spectra confirms the structure and identity of tryptophan 
+#to identify it in my sample with level 2 certainty. I have all the major fragments in my empirical spectra, and these all match those in the MassBank, NIST, HMDB library spectra.
+
+###################################URACIL############################################################################
+
+#URACIL
+### Find the scan where precursorMZ correspond to URACIL adduct:
+# Defining uracil peak mz values 
+MU <- 112.027277382  # URACIL monoisotopic mass and MS MS spectra: https://hmdb.ca/metabolites/HMDB0000300
+H <- 1.007276
+M_H <- M-H
+#Retention time from for uracil using Hydrophillic chromatography-Negative ESI Mode for that instrument(did not use xcms online as I have no account):
+#Retention time based on following reference doi: 10.1016/j.chroma.2017.08.050
+#"Accurate Prediction of Retention in Hydrophilic Interaction Chromatography (HILIC) by Back Calculation of 
+#High Pressure Liquid Chromatography (HPLC) Gradient Profiles" by Nu Wang1 and Paul G. Boswell
+apex.uracil<-2.1969*60
+rt.window <- cw_authorsxcms_default@peakwidth[2] #max rt width in seconds
+rtr <- c(apex.uracil-rt.window, apex.uracil+rt.window)
+
+spID2 <- mz.conditions2 |> filter(round(precursorMZ) == 111  & collisionEnergy == 40) |> slice_max(totIonCurrent) |> pull(spIdx)
+ggplotly(plot(raw_data_MS2[[spID2]]))
+
+#FIGURE 10
+
+#Comparing spectra for uracil with that at the following nist url: https://webbook.nist.gov/cgi/cbook.cgi?ID=C54126&Mask=200
+
+#Pre-cursor ion was 299.26 in mass
+#NIST M/Z peaks that were present in my spectra but in lower proportion abundance: 112,69,42
+#NIST M/Z peaks that were absent in my spetra 51, 53
+#M/Z peaks were present i my spectra but not in NIST spectra:
+#Additionally, my MS/MS spectra compared well visually with spectra obtained at following hmdb url:https://hmdb.ca/metabolites/HMDB0000300
+
+#Additionally  used Spectra and AnnotationHub packages to compare against MassBank spectra as follows:
+
+par(mar = c(1, 1, 1, 1))
+mbank_sub <- filterPrecursorMzValues(mbank, mz = M_H, ppm = 10) 
+plotSpectra(mbank_sub, main = mbank_sub$name, labels = function(z) format(mz(z)[[1L]], digits = 6), labelSrt = -30, labelPos = 2, labelOffset = 0.1, ylim = c(0,200))
+
+#FIGURE 11
+
+sps <- filterPrecursorMzValues(sps_mzfile, mz = M_H, ppm = 5) |> filterRt(c(apex.uracil-rt.window, apex.uracil+rt.window)) |> filterIntensity(intensity = low_int) |> addProcessing(norm_int)
+
+res<-compareSpectra(sps, mbank_sub, ppm = 20)
+max(res)
+ 
+#Results shows a cosinus similarity score of 0 % between any of the two Mass Bank tabulated uracil spectra 
+#and the empirical spectra sps number two. We now plot the correspondence using plotSpectraMirror function.
+
+#plotSpectraMirror(sps[2], mbank_sub[1], labels = function(z) format(mz(z)[[1L]], digits = 6),labelSrt = -30, labelPos = 2, labelOffset = 0.1)
+#Error in h(simpleError(msg, call)) : 
+#  error in evaluating the argument 'x' in selecting a method for function 'plotSpectraMirror': index out of bounds: index has to be between 1 and 0
+#FIGURE 12
+
+#Compare 
+mbank_sub[2]$collisionEnergy_text
+mbank_sub[2]$instrument
+#sps[2]$collisionEnergy
+#Error in i2index(i, length(x), rownames(x@spectraData)) : 
+#  index out of bounds: index has to be between 1 and 0
+
+#Authors also in their peer-reviewed publication observe "significant alterations between groups, including uracil (ICL = 1, p = 0.041,FC-log2 = 3.4) on day 7 feces
+#Despite this, because of the low spectral mataches between my emprical MS/MS spectra and those of NIST, HMDB, and MassBank, 
+#I cannot conclude with any  certainty that I have identified uracil in my samples or that the corresponding MS2 fragmentation spectra confirms the structure and identity of uracil in my sample
+#Based on my poor MS/MS spectral match with MassBank spectra, I may require MS1 extracted uracil chromatographic peak assessment and also 
+#comparison with spectral library where similar collision energy was used, as 10eV is substantially less than my 40eV used 
+
+#########################################L-ASPARTIC ACID##########################################################################
+
+#L-ASPARTIC ACID
+#Define parameters:
+MH <- 133.037507717  # monoisotopic molecular weight according to HMDB https://hmdb.ca/metabolites/HMDB0000191  
+H <- 1.007276
+M_H <- M-H #QUESTION: DO ACIDS MASSES GET DEDUCTED BY PROTON FOR IONIZATION?
+
+#Retention time for L-aspartic acid from for Hydrophillic chromatography-Negative ESI Mode for that instrument based on following reference:
+#"An isocratic fluorescence HPLC assay for the monitoring of l-asparaginase activity and l-asparagine depletion in children 
+#receiving E. colil-asparaginase for the treatment of acute lymphoblastic leukaemia
+#Christa E Nath 1, Luciano Dallapozza, Adam E Eslick, Ashish Misra, Deborah Carr, John W Earl
+#PMID: 18823071 DOI: 10.1002/bmc.1096
+apex.asparticacid<-3.5*60
+rt.window <- cw_authorsxcms_default@peakwidth[2] #max rt width in seconds. Is this the correct width to be using? I wish I knew as this affects the outcome
+rtr <- c(apex.asparticacid-rt.window, apex.asparticacid+rt.window)
+
+spID3 <- mz.conditions2 |> filter(round(precursorMZ) ==132  & collisionEnergy == 40) |> slice_max(totIonCurrent) |> pull(spIdx)
+ggplotly(plot(raw_data_MS2[[spID3]]))
+
+#FIGURE 13
+
+#Comparing spectra for L-aspartic acid with that at the following nist url: #https://webbook.nist.gov/cgi/cbook.cgi?ID=C54126&Mask=200
+#Pre-cursor ion was 224.06 in mass
+#NIST M/Z peaks were present in my MS/MS spectra but in lower proportion abundance: 90,133,115,70,43,28,18
+#NIST M/Z peaks were absent in my MS/MS spectra:NA
+#M/Z peaks were present in my spectra but not in NIST spectra:NA
+
+#Additionally, my MS/MS spectra compared well visually with spectra obtained at following hmdb https://hmdb.ca/metabolites/HMDB0000191
+#Additionally, I used Spectra and AnnotationHub packages to compare against MassBank MS2 spectra with similarity score as follows:
+
+par(mar = c(1, 1, 1, 1))
+mbank_sub <- filterPrecursorMzValues(mbank, mz = M_H, ppm = 10) 
+plotSpectra(mbank_sub, main = mbank_sub$name,labels = function(z) format(mz(z)[[1L]], digits = 6), labelSrt = -30, labelPos = 2, labelOffset = 0.1, ylim = c(0,200))
+
+#FIGURE 14
+
+sps <- filterPrecursorMzValues(sps_mzfile, mz = M_H, ppm = 5) |> filterRt(c(apex.asparticacid-rt.window, apex.asparticacid+rt.window)) |> filterIntensity(intensity = low_int) |> addProcessing(norm_int)
+
+res<-compareSpectra(sps, mbank_sub, ppm = 20)
+max(res)
+#Results shows a cosinus similarity score of 35.78 % between any of the two Mass Bank tabulated L-aspartic acid spectra and the empirical spectra sps number two. 
+#We now plot the correspondence using plotSpectraMirror function.
+
+#plotSpectraMirror(sps[2], mbank_sub[1], labels = function(z) format(mz(z)[[1L]], digits = 6),labelSrt = -30, labelPos = 2, labelOffset = 0.1)
+#ERROR FIGURE 15
+#Error in h(simpleError(msg, call)) : 
+#  error in evaluating the argument 'x' in selecting a method for function 'plotSpectraMirror': index out of bounds: 
+
+#Compare between collisions energy
+mbank_sub[2]$collisionEnergy_text
+ 
+mbank_sub[2]$instrument
+
+#I conclude that the corresponding MS2 NIST spectra confirms the structure of L-asparticacid and that with additional
+#MS1 pre-cursor ion spectra confirming elemental composiition we may be able conclude with level 2 certainty.However,
+# I cannot rely on also a MassBank spectral library as my R-based coding to compare is not compiling or executing properly) 
+#I conclude nonetheless with Level 2 certainty that I can identify L-aspartic acid  apppropriate structure based on MS/MS spectra 
+#visual comparison with NIST spectral library. 
+
+```
+#EXERCISE 3: Run a full XCMS analysis for HILIC negative ionization mode. Stick to xcms parameters defined by authors.
+
+#EXERCISE 3.1 Explain in your own words each one of the steps in the xcms workflow. Which is the rationale of performing different chromatographies 
+#and using different ionization modes? 
+
+Ionization dictates the type of mass spectrum.Different metabolites ionize differently an /or more efficeintly, and this is why both negative and positive ionization modes should be performed for MS. Different metabolites derived from different cellular environments (i.e. hydropphoc membranes vs. soluble proteins in aqueous cytoplasm) will also separate differently from mixtures of other metabolites, and therefore appropriate Higher resolution separation can be achieved by targeting chromatographic technique to more differentiable and unique separation properties of metabolite (i.e. hydrophobicity via Reverse-Phase (RP-HPLC) or hydrophobic interaction (HI)resin, size or molecular weighted via size-exclusion chromatogaphy resin, strong negative charge via anion-exchange chromatography, strong positive charge via cation exchange chromatogrphy, strong affinity via streptavaid or 6x-polyhistidine affinity chromatography resins, etc. The following code below implements the xcms process:
+
+```{r cars7}
+#XCMS
+
+#XCMS STEP1: 
+#Chromatographic peak detection is performed on extracted ion chromatograms, which helps testing and tuning peak detection settings. 
+#Running centWave chromatographic peak detection on tryptophan peak using recommended publication authors parameters (not Scripps on-line xcms or default) 
+#Centwave parameters. Running centWave algorithm on EICs implies different background signal estimation since less data is available.
+#Thus, different settings for snthresh are needed (generally a lower snthresh will be used for EICs since the estimated background 
+#signal tends to be higher for data subsets than for the full data):
+
+#Finding peaks on tryptophan chromatogram
+xchr_tryptophan <- findChromPeaks(chr_tryptophan, param = cw_authorsxcms_default)
+chromPeaks(xchr_tryptophan)
+
+#Plotting detected peaks
+sample_colors <- group_colors[xchr_tryptophan$class]
+plot(xchr_tryptophan, col = sample_colors, peakBg = sample_colors[chromPeaks(xchr_tryptophan)[, "column"]]) 
+#FIGURE 16
+
+#Nice looking green/red, uniform and symmetrical peaks
+
+#Performing chromatographic peak detection in the whole demo dataset using optimized peak detection settings from authors (NOT ONLINE xcms or default). 
+#Setting snthreh = 1000 to speed-up the entire data analysis process:
+
+cw_authorsxcms_default <- CentWaveParam(ppm = 5, peakwidth = c(5, 15), 
+                                        snthresh = 1000, prefilter = c(3, 5000), 
+                                        mzCenterFun = "wMean", integrate = 1L,
+                                        mzdiff = -0.001, fitgauss = FALSE, 
+                                        noise = 0, verboseColumns = FALSE, 
+                                        roiList = list(), firstBaselineCheck = TRUE, 
+                                        roiScales = numeric())
+
+xdata <- findChromPeaks(raw_data, param = cw_authorsxcms_default)
+
+#XCMS STEP 2: ALIGNMENT
+
+#The time at which analytes elute from the chromatographic column (rt) can vary between samples (and even compounds). 
+#The alignment step (retention time correction) adjusts for these differences by shifting signals 
+#along the retention time axis and aligning them between different samples within an experiment
+
+#Aim: adjust shifts in retention times between samples.
+#Function: adjustRtime.
+#Available methods:
+#obiwarp (ObiwarpParam) (Prince and Marcotte 2006): warps the (full) data to a reference sample.
+#peakGroups (PeakGroupsParam) (Smith et al. 2006): align spectra from different samples based on hook peaks. 
+#Need to define the hook peaks first: peaks present in most/all samples.
+#We here align samples using obiwarp with authors (not online) xcms parameters
+
+#According to authors' cited publication: "The retention time between samples were aligned employing the obiwarp algorithm 
+#(parameters: binSize = 0.6, distFun = "cor_opt") with a previous alignment of pooled QC samples followed by the alignment of the samples". 
+
+#Defining author-specified settings for the alignment (initially with no subset of QC samples):
+#xdata_adj <- adjustRtime(xdata, param = ObiwarpParam(binSize = 0.6, distFun = "cor_opt")
+
+#Executing this code unfortunately generated the following error using default system centerSample=55
+#Stop worker failed with the error: wrong args for environment subassignment
+#Error: BiocParallel errors
+#1 remote errors, element index: 23
+#85 unevaluated and other errors
+#first remote error:
+#  Error in socketConnection(port = port, server = TRUE, blocking = TRUE, : cannot open the connection
+# In addition: Warning messages:1: In serialize(data, node$con) :'package:sta 3: In serialize(data, node$con) :'package:stats' may not be available when loading
+# may not be available when loading 2: In serialize(data, node$con) : 'package:stats' may not be available when loading
+
+#Therefore, I used alternative SUBSET-BASED alignment that reflects the authors' mention of alignment using pooled QC samples initially instead:
+#I  specify a subset of QC samples that based on boxplot of total ion current looked OK and not as outliers, as well as use subset adjust=previous as 
+#authors mention QC samples adjustment preceded those of regular samples:
+#For some experiments it might be better to perform the alignment based on only a subset of the available samples, 
+#e.g. if pooled QC samples were injected at regular intervals or if the experiment contains blanks. 
+#All alignment methods in xcms support such a subset-based alignment in which retention time shifts are estimated on
+#only a specified subset of samples followed by an alignment of the whole data set based on the aligned subset.
+#The subset of samples for such an alignment can be specified with the parameter subset of the PeakGroupsParam or ObiwarpParam object
+#Parameter subsetAdjust allows to specify the method by which the left-out samples will be adjusted. There are currently two options available:
+#subsetAdjust = "previous": adjust the retention times of a non-subset sample based on the alignment results of the previous subset sample (e.g. a QC sample).
+#This approach requires a meaningful/correct ordering of the samples within the object (i.e., samples should be ordered by injection index).
+
+xdata_adj <- adjustRtime(xdata, param = ObiwarpParam(binSize = 0.6, distFun = "cor_opt", subset=c(91,92,93,94,95), subsetAdjust="previous"))
+
+#This successfully adjusted retention time. I explore the impact of this adjustment. Inspecting difference between raw and adjusted retention times.
+plotAdjustedRtime(xdata_adj, col = group_colors[xdata$class]) 
+
+#FIGURE 17
+
+#Evaluate impact of the alignment on previously extracted tryptophan peak. Plotting XIC for tryptophan before and after alignment:
+#Implement the retention time alignment when missalignments across samples are over ~ 20-30 seconds which is the accepted peak width 
+#for LC chromatographic peaks. Again, recalling values for rtr and mzr for filtering tryptophan peak:
+M <- 204.089877638  
+H <- 1.007276
+M_H <- M-H
+## Define tryptophan peak mz range considering 10 ppm error
+error <- 10 #ppm
+mmu_min <- M_H-(error*M_H/1e6)
+mmu_max <- M_H+(error*M_H/1e6)
+mzr <- c(mmu_min, mmu_max)
+#Define tryptophan peak rt range width with minute to second unit conversion
+apex.tryptophan<-2.99*60
+rt.window <- cw_authorsxcms_default@peakwidth[2] #max rt width in seconds
+rtr <- c(apex.tryptophan-rt.window, apex.tryptophan+rt.window)
+
+#Using adjustedRtime parameter to access raw/adjusted retention times
+par(mfrow = c(1, 2), mar = c(4, 4.5, 0.9, 0.5))
+plot(chromatogram(xdata, mz = mzr,rt = rtr, adjustedRtime = FALSE), col = group_colors[xdata$class], peakType = "none", lwd = 2,main = "Before alignment")
+plot(chromatogram(xdata_adj, mz = mzr, rt = rtr),col = group_colors[xdata$class], peakType = "none", lwd = 2,main = "After alignment")
+
+#FIGURE 18
+#Evidently, this did not adjust enough to center the peak. 
+
+#We now try again with different retention time rt window previously used for generating nice tryptophan XIC:
+apex<-2.99*60
+ahigh<-apex+50
+alow<-apex-50
+ahigh
+alow
+rt = c(alow, ahigh)
+
+par(mfrow = c(1, 2), mar = c(4, 4.5, 0.9, 0.5))
+plot(chromatogram(xdata, mz = mzr,rt = rt, adjustedRtime = FALSE), col = group_colors[xdata$class], peakType = "none", lwd = 2, main = "Before alignment")
+plot(chromatogram(xdata_adj, mz = mzr, rt = rt), col = group_colors[xdata$class], peakType = "none", lwd = 2, main = "After alignment")
+#FIGURE 19
+
+#This did not result in significant difference in envelope.
+#I will not keep these retention time adjustment settings:
+#I drop these obiwarp alignment adjustments and restore original retention times as follows:
+xdata_adj <- dropAdjustedRtime(xdata_adj)
+hasAdjustedRtime(xdata_adj)
+
+#XCMS Step 3: xcms Correspondence
+#Correspondence is usually the final step in LC-MS data pre-processing in which data, presumably representing signal 
+#from the same originating ions, is matched across samples
+
+#Aim: group signal (peaks) from the same ion across samples.
+#Function: groupChromPeaks.
+#Methods available:
+#peak density (PeakDensityParam) (Smith et al. 2006).
+#nearest (NearestPeaksParam)
+
+#Iterate through slices along m/z. Within these small slices along the m/z dimension, the algorithm combines 
+#chromatographic peaks depending on the density of these peaks along the retention time axis: i.e., 
+#it compares retention times of peaks within each slice and group peaks if they are close.Distribution of peaks along retention time axis 
+#is used to define those peaks to group. plotChromPeakDensity: plot distribution of identified peaks along rt for a given m/z slice; 
+#simulates correspondence analysis.
+
+#Peak density parameters:
+#bw is the most important parameter. It defines the smoothness of the density function
+#binSize: m/z width of the data slice in which peaks are grouped. It should be small enough to avoid peaks 
+#from different ions measured at similar retention times to be grouped together
+#maxFeatures: maximum number of features to be defined in one bin.
+#minFraction: minimum proportion of samples (of one group!) for which a peak has to be present.
+#minSamples: minimum number of samples a peak has to be present.
+#Set on-line xcms parameters for peak density using PeakDensityParam
+
+#According to cited publication's authors: The detected peaks were grouped to features with a minimum threshold 
+#of 40% in at least one experimental group (parameters: bw = 1, minFraction = 0.4, minSamples = 5). 
+#Features missing a peak in certain samples were integrated in the respective retention time width of the feature. The resulting 
+#feature list was further processed by the R package CAMERA (1.48)81 (parameters: perfwhm = 0.6, ppm = 5), 
+#creating adduct and isotopologue annotations. '
+
+#Setting authors' (not xcms online) xcms parameters for peak density using PeakDensityParam:
+## Set on-line xcms default parameters for peak density.
+authorsxcms_pdp <- PeakDensityParam(sampleGroups = xdata$class,bw = 1,minFraction = 0.4,binSize = 0.015,minSamples = 5,maxFeatures = 100)
+
+#Adjusting peak density parameters. Plotting data for the m/z slice containing the tryptophan peak.
+#Using plotChromPeakDensity to simulate a correspondence analysis in the same slice using on-line xcms parameters for peak density. 
+#Determining if they fit to tryptophan:
+
+## Extract a BPC for an m/z slice containing tryptophan
+par(mfrow = c(3, 1), mar = c(4, 4.3, 1, 0.5))
+plot(chromatogram(xdata, mz = mzr, aggregationFun = "max")) 
+#FIGURE 20
+highlightChromPeaks(xdata, mz = mzr, whichPeaks = "apex_within")
+
+## Dry-run correspondence and show the results.
+plotChromPeakDensity(xdata, mz = mzr, type = "apex_within", param = authorsxcms_pdp, main = "bw = 1")
+#FIGURE 21
+## Increase bw to 20
+authorsxcms_pdp2 <- PeakDensityParam(sampleGroups = xdata$class,bw = 20,minFraction = 0.4,binSize = 0.015,minSamples = 5,maxFeatures = 100)
+plotChromPeakDensity(xdata, mz = mzr, type = "apex_within", param = authorsxcms_pdp2, main = "bw = 20")
+
+#FIGURE 22
+
+#In the top figure above (to panel) points are peaks per sample; Black line: peak density distribution; Grey rectangles: grouped peaks (features).
+#The second bw=20 plots illustrates a failed correspondence shows a too relaxed bw parameter where all peaks are grouped in to a single 
+#feature (bottom panel)and how reducing to bw=1 using authors settings (middle panel) enabled grouping of corresponding peaks into different features 
+
+#Performing correspondence analysis using optimized peak density settings on on-line xcms. Plotting detected features
+xdata <- groupChromPeaks(xdata, param = authorsxcms_pdp) 
+
+## Plotting detected features
+plot(featureDefinitions(xdata)$rtmed, featureDefinitions(xdata)$mzmed,
+     xlab = "retention time", ylab = "m/z", main = "features",
+     col = "#00000080", pch = 21, bg = "#00000040")
+grid()
+
+#FIGURE 23
+
+
+#Evidently, only one color (class) had tryptophan feature
+
+#The featureValues method returns a matrix [features × samples] with features’ abundance estimates. 
+#This is then generally used as the intensity matrix for downstream analysis
+#featureValues parameters:
+#value: name of the column in chromPeaks that should be returned, i.e., the default value is “index” which simply return the 
+#index of peaks in the chromPeaks matrix assigned to each feature. If value = "into" is used, integrated peaks intensities are returned.
+#If value = "maxo" maximum peak intensities are returned.
+#method: character specifying the method to resolve multi-peak mappings within the same sample, i.e. to define the representative peak
+#for a feature in samples where more than one peak was assigned to the feature. If “medret”: select the peak closest to the median retention
+#time of the feature. If “maxint”: select the peak yielding the largest signal. If “sum”: sum the values (only if value is “into” or “maxo”).
+
+#Using featureValues to extract the integrated peak intensity per feature/sample used to later answer EXERCISE 3.2
+## Getting feature intensity matrix and its dimension
+
+fmat <- featureValues(xdata, value = "maxo", method = "maxint")
+dim(fmat)
+
+#4598 features for 109 samples
+
+#XCMS STEP 4: MISSING VALUE GAP-FILLING:
+
+head(fmat)
+
+#Evidently, there are several missing values in this feature matrix. Peak detection may have failed in one sample, resulting in  Peak feature matrix returning NA values.
+#Ion is not present in a sample. Missing values are reported if in one sample no chromatographic peak was detected 
+#in the m/z - rt region of the feature. This does however not necessarily mean that there is no signal for that specific ion in that sample. 
+#The chromatographic peak detection algorithm could also just have failed to identify any peak in that region, 
+#e.g. because the signal was too noisy or too low. Thus after correspondence, it is recommended to perform a gap-filling step 
+#to handle missing values and avoid sparse matrices for subsequent statistical analysis.
+
+#fillChromPeaks allows to fill-in signal for missing peaks from the feature area (defined by the median rt and mz of all peaks assigned to the feature). 
+#Data to fill-in are retrieved from original mzML files
+#fillChromPeaks Parameters:
+#expandMz, expandRt: expands the region from which signal is integrated in m/z or rt dimension. 
+#A value of 0 means no expansion, 1 means the region is grown by half of the feature’s m/z width on both sides.
+#ppm: expand the m/z width by a m/z dependent value.
+#Fill in missing values and compare the number of missing values before and after doing it.
+
+##Obtaining missing values before filling in peaks
+apply(featureValues(xdata, filled = FALSE), MARGIN = 2,FUN = function(z) sum(is.na(z)))
+
+## Filling in peaks for long-duration 
+xdata <- fillChromPeaks(xdata)
+
+## Getting missing values after filling in peaks
+apply(featureValues(xdata), MARGIN = 2,FUN = function(z) sum(is.na(z)))
+
+#XCMS STEP 7: Review History
+
+#XCMSnExp objects allow to capture all performed pre-processing steps along with the used parameter class within the (processHistory?) slot. 
+#Storing also the parameter class ensures the highest possible degree of analysis documentation and in future might enable to replay 
+#analyses or parts of it. The list of all performed preprocessings can be extracted using the processHistory method.
+
+#Summary of xcms process
+processHistory(xdata)
+
+#EXERCISE 3.2: For the experimental conditions state: How many peaks were detected on average per sample? How many features were finally detected? 
+#The number of detected peaks was 815088. THe number of feature detected was 4598 features for 109 samples. 
+#found in 80% of the samples of at least one of the experimental groups. These results are supported by the following code:
+
+chromPeaks(xdata) |>dim()
+ 
+#The number of detected features was 4598 
+### Get feature information 
+featureDefinitions(xdata) |>dim()
+feature.info <- featureDefinitions(xdata) |>as.data.frame()
+
+#Obtain intensity values for each feature
+D <- featureValues(xdata, value = "maxo", method = "maxint")|> as.data.frame()
+fmat <- featureValues(xdata, value = "maxo", method = "maxint")
+dim(fmat)
+
+#Therefore 4598 features for 109 samples
+4598/109
+#42.18349 features per sample differs from later calculation
+
+#Sample representation criteria:
+# Compute number of samples per experimental group and minimum percent  
+n.samplespergroup <- table(pData(xdata)$class) 
+percent <- 0.8 #apply the desired percentage
+samples.min <- round(n.samplespergroup*percent,0)
+samples_per_group <- feature.info[,c(grep("npeaks", colnames(feature.info))+1:length(samples.min))]
+samples_per_group_QC <- samples_per_group[colnames(samples_per_group) != "QC"]
+## remove QCs
+samples.min_QC <- samples.min[names(samples.min)!= "QC"]
+resta <- apply(samples_per_group_QC, 1,  function(x) 
+{any(x-as.vector(samples.min_QC)>0)}
+)
+idx_s <- rownames(D)[which(resta==TRUE)]
+
+cat(length(idx_s), "out of", dim(D)[1], "found in 80% of the samples of at least one of the experimental groups")
+head(feature.info[idx_s,],5)
+
+#Minimum intensity threshold
+## Computing the mean intensities for each group 
+class <- pData(xdata)$class
+median.intensities <- as.data.frame(t(apply(D,1, function(x) tapply(x, class, median, na.rm = TRUE))))
+median.intensities$QC <- NULL #remove QC group
+# Establish intensity threshold value 
+thresholdvalue <- 10000
+#Get number of features with mean intensity above certain threshold counts in at least one of the groups except QC group 
+idx_i <- names(which(apply(median.intensities,1, function(x) any(x>thresholdvalue)==TRUE)==TRUE))
+cat(paste(length(idx_i), "out of", dim(median.intensities)[1]), "above the threshold intensity value")
+```
+
+#EXERCISE 4.1.1 Use your feature matrix to reproduce the statistical analysis performed by authors as they state in the pre-print:
+#Do you get to the same PCA conclusions as in Figure 1B? 
+
+Figure 1B depicts PCA and Boxplots of the distance to the centroid of the combined (RP+HILIC/Negative+ Positive Polarity)data obtained from the untargeted  LC-HRMS experiments of all sampling time points of fecal samples t proved experimental overview. Generally, the metabolome of the pathological and the control CTR PAT group exhibited no group-specific clustering in the PCA, neither in the plasma nor in the feces. However,  there was clearly clustering between sampling time points, as seen in plasma and, in our specific feces samples.Time point was a significant, while group affiliation was not deemed significant (p<0.001). Individual factors dominated differences in metabolome between patients (PATIENT ID). Average euclidean. In fecal samples, slightly tighter clustering was shown at Day 28 along with a tendency to spread out at term equivalent age, indicating a diversification of the gut metabolome over time and possibly also the gut microbiome.
+
+Less variance (15.54% +4.24%=19.78%) was evidently captured by my first 2 PCA components compared to (25.75%+7.13%=32.88%) prior to removal of QC class samples. Unlike the authors' Figure 1B, for fecal samples, there does not appear to be clustering around sampling time (7days, 28days, termage) but there is clustering for QC class before it was removed as a variable.The approach taken for this involved following filtering criteria and explotaroty data analysis described below:    
+```{r cars8}
+#Filtering criteria
+#1.Samples representation in each feature: Retain just those features consistently found across i.e., 80% samples in at least one experimental group
+#2.Minimum intensity threshold: Filter out those features below a certain intensity threshold. To ensure recording suitable MS/MS spectra for ID purposes parent 
+#ions should present a minimum intensity
+#3.Analytical variability: Features should enclose more biological variability than analytical variability. Analytical variability is computed 
+#using QC samples, i.e., a pool of each individual sample entering the study and periodically analyzed along the worklist. 
+#Filter out those features with more analytical than biological variability
+#4.Statistical Criteria: Retain those features enclosing significant variation according to our experimental design
+#5.Library hits: Retain only mzRT returning a MS1 match with a library compound (i.e, HMDB)
+
+#Exploratory data analysis to assess analytical variability and identify differences between treated, untreated and control samples using PCA.
+  
+#Computing PCA first with 4 classes (day28, day7, termage, QC)
+
+#Filter out features 
+D2 <- D[intersect(idx_i, idx_s),]
+##  Row-wise normalization 
+D.norm <- as.data.frame(apply(D2, 1, function(x) (x/max(x, na.rm = TRUE))))
+D.norm[is.na(D.norm)] <- 0
+pca_data <- prcomp(D.norm,retx=TRUE, center=TRUE, scale=FALSE)
+summary(pca_data)$importance[,c(1:3)]  
+D.norm.backup<-D.norm
+
+##  Computing PCA first with 4 classes (day28, day7, termage, QC)
+D.norm.backup$class<-pheno$class
+D.norm.backup$class2 <- str_remove(D.norm.backup$class, "PAT_")
+D.norm.backup$class2 <- str_remove(D.norm.backup$class2, "CTR_")
+test.pca.plot <- autoplot(pca_data, data = D.norm.backup, colour = "class2") 
+test.pca.plot
+
+#Evidently, there 25.75%+7.13%=32.88% of total variance is captured by first 2 Principal components based on eigenvectors and values
+
+#Filtering out analytical variability
+
+#Function to calculate RSD% 
+RSD <- function(x){100*sd(x, na.rm = TRUE)/mean(x, na.rm = TRUE)}
+
+## Define  QC idx
+QChits <- which(class == "QC")
+
+## Compute RSDs across samples and QCs
+RSD_samples <- apply(D[,-QChits],1, RSD)
+RSD_QC <- apply(D[, QChits],1, RSD)
+
+## Filter those features with RSD(QCs) > RSD (Samples)
+idx_qc <- names(RSD_samples)[which(RSD_QC< RSD_samples)]
+
+cat(paste(length(idx_qc), "out of", dim(median.intensities)[1]), "hold higher biological than analytical variation") 
+#2493 out of 4598 hold higher biological than analytical variation
+
+#Multivariate Data analysis
+
+# Merge intensity  sample representation and QCs criteria
+data2stats <- D[intersect(intersect(idx_i, idx_s),idx_qc),-c(grep("QC", class))]
+colnames(data2stats) <- pData(xdata)$sample_name[which(pData(xdata)$class!="QC")]
+
+# Row-wise normalization
+D.norm <- as.data.frame(apply(data2stats, 1, function(x) (x/max(x, na.rm = TRUE))))
+D.norm[is.na(D.norm)] <- 0
+# Compute PCA
+pca_data <- prcomp(D.norm,retx=TRUE, center=TRUE, scale=FALSE)
+summary(pca_data)$importance[,c(1:3)]
+
+# Scores data
+D.norm.backup2 <- D.norm.backup[!D.norm.backup$class2%in% c("QC"), ] 
+scores <- data.frame(pca_data$x[, c("PC1", "PC2")])
+scores$class<-D.norm.backup2$class2
+#scores$class <- cl[-c(grep("QC", class))]
+scores$lab <- rownames(D.norm)
+
+scores.plot <- ggplot(data = scores, aes(x = PC1, y = PC2, colour = class, label=lab)) + 
+  geom_point(alpha = I(0.7), size = 4) + 
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  xlab(paste("PC1 (", round(summary(pca_data)$importance[2,1], 2) * 100, "%)"))+
+  ylab(paste("PC2 (", round(summary(pca_data)$importance[2,2], 2) * 100, "%)"))+
+  stat_ellipse() + 
+  theme_bw()
+ggplotly(scores.plot)
+
+#FIGURE 24 WARNING
+
+#Since my plot did not display, I am again re-creating PCA of Figure 1B with only 3 time-point classes with no QC class like the authors:
+#Remove QC rows
+D.norm.backup2 <- D.norm.backup[!D.norm.backup$class2%in% c("QC"), ] 
+dim(D.norm.backup2)  
+#only perform PCA on continuous variables (not categorical class or class2 columns)  
+pca_data2 <- prcomp(D.norm.backup2[,c(1:795)], center = TRUE,scale. = TRUE) 
+
+# summary of the prcomp object 
+summary(pca_data2) 
+#Only 75 cohort sample PCA eigenvalues/vectors show instead of total 109 samples
+
+test.pca.plot2 <- autoplot(pca_data2, data = D.norm.backup2, colour = "class2") 
+test.pca.plot2  
+
+#FIGURE 25
+
+#Less variance (15.54% +4.24%=19.78%) is evidently captured by first 2 PCA components 
+#compared to (25.75%+7.13%=32.88%) prior to removal of QC class samples.
+#Unlike the authors' Figure 1B, for fecal samples, there does not appear to be clustering
+#around sampling time (7days, 28days, termage) but there is clustering for QC class before it was removed as a variable'
+
+#Univariate Data analysis
+
+## Remove suspicious samples 
+#data2stats_no <- data2stats[,-c(3,21)]
+#data2stats_no[is.na(data2stats_no)] <- 0
+#cl_no <- cl[-c(3,21)]; cl_no <- cl_no[cl_no!='QC']
+
+## Perform an ANOVA comparison for the treated, untreated and control groups 
+#gr <- as.factor(cl_no)
+gr <- as.factor(D.norm.backup2$class2)
+pm <- matrix(ncol=3,nrow=dim(data2stats[1]))
+for(i in 1:nrow(data2stats)){ 
+    aov.out <- aov(as.numeric(data2stats[i,]) ~ gr)
+    multcomp <- TukeyHSD(aov.out)
+    pm[i,]  <- as.matrix(multcomp$gr[,"p adj"])
+}
+
+rownames(pm) <- rownames(data2stats)
+colnames(pm) <- rownames(multcomp$gr)
+
+head(pm)
+p.val.adj.day7.day28 <- p.adjust(pm[,"day7-day28"],"fdr")
+p.val.adj.termage.day28 <- p.adjust(pm[,"termage-day28"],"fdr")
+p.val.adj.termage.day7 <- p.adjust(pm[,"termage-day7"],"fdr")
+
+## Create a function to compute FC
+fc.test <- function(df, classvec, class.case, class.control) {
+  coln <- names(df)
+  case <- df[which(coln == class.case)]
+  control <- df[which(coln == class.control)]
+  logFC <- log2(case/control)
+  FC <- case/control
+  FC2 <- -control/case
+  FC[FC < 1] <- FC2[FC < 1]
+  fc.res <- c(FC, logFC)
+  names(fc.res) <- c("FC", "logFC")
+  return(fc.res)
+}
+
+# Calculate median intensities
+median.intensities <- t(apply(data2stats, 1, tapply, D.norm.backup2$class2, median))
+
+# Calculate FC for 'day7-day28' groups
+fc.day7.day28 <- as.data.frame(t(apply(median.intensities, 1, function(x)
+  fc.test(x, classvec = D.norm.backup2$class2, class.case = "day7", class.control = "day28"))))
+colnames(fc.day7.day28) <- c("FC_day7_day28", "logFC_day7_day28")
+# Calculate FC for 'termage-day28' groups
+fc.termage.day28 <- as.data.frame(t(apply(median.intensities, 1, function(x)
+  fc.test(x, classvec = D.norm.backup2$class2, class.case = "termage", class.control = "day28"))))
+colnames(fc.termage.day28) <- c("FC_termage_day28", "logFC_termage_day28")
+# Calculate FC for 'termage-day7' groups
+fc.termage.day7 <- as.data.frame(t(apply(median.intensities, 1, function(x)
+  fc.test(x, classvec = D.norm.backup2$class2, class.case = "termage", class.control = "day7"))))
+colnames(fc.termage.day7) <- c("FC_termage_day7", "logFC_termage_day7")
+
+idx_day7_day28 <- which(abs(fc.day7.day28$FC)> 2 & p.val.adj.day7.day28 < 0.05)
+idx_termage_day28 <- which(abs(fc.termage.day28$FC)> 2 & p.val.adj.termage.day28 < 0.05)
+idx_termage_day7 <- which(abs(fc.termage.day7$FC)> 2 & p.val.adj.termage.day7 < 0.05)
+
+cat(paste(length(idx_day7_day28), "out of", dim(data2stats)[1]), " features significantly varying in untreated vs ctr comparison")
+#11 out of 246  features significantly varying in untreated vs ctr comparison>
+cat(paste(length(idx_termage_day28), "out of", dim(data2stats)[1]), "significantly varying in treated vs untreated comparison")
+#0 out of 246 significantly varying in treated vs untreated comparison>
+cat(paste(length(idx_termage_day7), "out of", dim(data2stats)[1]), "significantly varying in treated vs untreated comparison")
+#11 out of 246 significantly varying in treated vs untreated comparison
+
+# Draw Volcano plot for either comparisons
+RES <- cbind.data.frame(median.intensities, fc.day7.day28, p.val.adj.day7.day28, fc.termage.day28,p.val.adj.termage.day28,fc.termage.day7,p.val.adj.termage.day7)
+
+RES$labels <- rownames(RES)
+par(mar = c(1, 1, 1, 1))
+p1 <- ggplot(data = RES, aes(x = logFC_day7_day28, y = -log10(p.val.adj.day7.day28),label = labels)) +
+  geom_point(alpha = 0.4, size = 1.75) + theme(legend.position = "none") +
+  xlim(-10, 10) + 
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  geom_vline(xintercept = log2(2), linetype = "dashed") + 
+  geom_vline(xintercept = -log2(2), linetype = "dashed") + 
+  labs(x = "log2(FC)", y = "-log10(p.adj)", title = "day7vsday28") + theme_bw()
+
+p2 <- ggplot(data = RES, aes(x = logFC_termage_day28,y=-log10(p.val.adj.termage.day28),label = labels)) +
+  geom_point(alpha = 0.4, size = 1.75) + theme(legend.position = "none") +
+  xlim(-10, 10) + 
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  geom_vline(xintercept = log2(2), linetype = "dashed") + 
+  geom_vline(xintercept = -log2(2), linetype = "dashed") + 
+  labs(x = "log2(FC)", y = "-log10(p.adj)", title = "termagevsday28") + theme_bw()
+
+ggplotly(p2)
+
+#FIGURE 26
+## Summarize results and plot Volcano plot
+RES <- cbind.data.frame(median.intensities, fc.day7.day28, p.val.adj.day7.day28, fc.termage.day28,  p.val.adj.termage.day28,fc.termage.day7,p.val.adj.termage.day7)
+#Error Generated
+# Combine FC values as a criteria to sort features
+#idx.s <- union(idx_day7_day28, idx_termage_day28, idx_termage_day7)
+idx.s <- union(idx_day7_day28, idx_termage_day28)
+idx.s <- union(idx.s, idx_termage_day7)
+RES.sig <- RES[idx.s,]
+
+```
+#EXERCISE 4.1.2: Reproduce Figure 3F for Tryptophan for HILIC ESI(-) conditions. How do their levels compare to those from their metabolites? 
+#Is there any rationale?
+
+Figure 3F depicts boxplot of several tryptophan metabolites with altered abundance between experimental groups in plasma and feces.
+The tryptophan metabolites to be displayed are INDOLELACTIC ACID, TRYPTAMINE, 5-HYDROXYINDOLE.According to the authors, tryptamine, also a 
+neuroactive TRP metabolite, was positively correlated with Enterococcus, while indole, the neuroactive TRP metabolite, was negatively correlated with Staphylococcus".Therefore, we will retrieving MS1 putative hits using HMDB for these three metabolites as follows:
+```{r cars9}
+#A simple matching of feature m/z values against theoretical m/z values is in HMDB performed through MetaboAnnotation package. 
+#This package, defines high-level user functionality to support and facilitate annotation of MS-based metabolomics data.
+#As a result, we obtain MS1 putative annotation of features. This is the lowest level of confidence in metabolite annotation. 
+#However, it gives ideas about potential metabolites that can be analyzed in further downstream experiments and analyses
+#To keep the runtime of this tutorial short, MS1 match is done after feature filtering. However, MS1 annotation can be done before 
+#any filter is performed. This should eventually help to better control false positives during statistical comparison.
+#First, we define the target compounds database (HMDB) in which we have only the monoisotopic mass available for each entry. 
+#We need to convert this monoisotopic mass to m/z values in order to match the m/z values from the features (i.e. the query m/z values) 
+#against them. For this we need to define the most likely ions/adducts that would be generated from the compounds based on the ionization 
+#mode used in the experiment. We assume the most abundant adducts from the compounds being “[M+H]+”. Notice that you can get a full list of
+#supported adducts the MetaboCoreUtils::adductNames(polarity = "positive") function can be used.
+
+#' Load HMDB as target database 
+HMDB_t <-  readRDS(file = "C:/Users/User/Desktop/R/Metabolomics/Metabolomics/HMDB_t.rds")
+#' Select plausible adducts according to polarity
+adducts_negative <- MetaboCoreUtils::adductNames(polarity = "negative")[c(13,16,18,20,36,38)]
+
+#' Select the query data
+DF2ID <- cbind.data.frame(feature.info[rownames(RES.sig),], RES.sig)
+DF2ID$features_id <- rownames(DF2ID)
+DF2ID$mz <- DF2ID$mzmed
+
+#We next perform the matching with the matchValues function providing the query and target data 
+#as well as a parameter object (in our case a Mass2MzParam) with the settings for the matching. 
+#With this Mass2MzParam, the monoisotopic mass of target compounds in the data base get first converted 
+#to m/z values, based on the defined adducts, and these are then matched against the query m/z values 
+#(i.e. the m/z values for the features).
+
+#' Define parameters to perform the search
+#' Use only [M-H] adduct
+parmH <- Mass2MzParam(adducts = adducts_negative[1],tolerance = 0.005, ppm = 20)
+#' Match values
+matched_featuresH <- matchValues(query = DF2ID, target = HMDB_t , param = parmH)
+#' Explore and interpret results 
+matched_featuresH
+
+#From the 16 features in the query 3 are matched against at least one target compound in the HMDB_t dataframe 
+#(all matches are against a single compound).
+#matchedData returns a DataFrame with all rows in query and their corresponding matches 
+#in target along with the matching adduct (column "adduct") and the difference in m/z 
+#(colum "score" for absolute differences and "ppm_error" for the m/z relative differences). 
+#Note that if a row in query matches multiple elements in target, this row will be duplicated 
+#in the DataFrame returned by data. For rows that can not be matched NA values are reported.
+
+##The tryptophan metabolites to be displayed like authors Figure 3F are INDOLELACTIC ACID, TRYPTAMINE, 5-HYDROXYINDOLE
+#First, Find putative ID for features representing INDOLELACTIC ACID:
+
+#INDOLELACTIC ACID (indole-3-lactic acid)
+##Data based on following scientific references:
+#https://hmdb.ca/metabolites/HMDB0000671
+#Apex for INDOLELACTIC ACID = 254
+
+#Metabolomics. 2015; 11(3): 696–706.
+#Published online 2014 Sep 7. doi: 10.1007/s11306-014-0727-x
+#PMCID: PMC4419193
+#PMID: 25972771
+#Predicting retention time in hydrophilic interaction liquid chromatography mass spectrometry and its use for peak annotation in metabolomics
+#Mingshu Cao,corresponding author1 Karl Fraser,1 Jan Huege,1 Tom Featonby,1 Susanne Rasmussen,2 and Chris Jones
+
+#Pediatr Res. 2020 Aug; 88(2): 209–217.
+#Published online 2020 Jan 16. doi: 10.1038/s41390-019-0740-x
+#PMCID: PMC7363505
+#NIHMSID: NIHMS1547607
+#PMID: 31945773
+#Indole-3-lactic acid, a metabolite of tryptophan, secreted by Bifidobacterium longum subspecies infantis is anti-inflammatory in the immature intestine.
+#Di Meng,1 Eduardo Sommella,2 Emanuela Salviati,2,4 Pietro Campiglia,2,3 Kriston Ganguli,1 Karim Djebali,1 Weishu Zhu,1 and W. Allan Walker
+
+IDfeaturesMS1 <- matchedData(matched_featuresH)
+# Find INDOLELACTIC ACID (indole-3-lactic acid) putative ID in MS1 considering 10 ppm
+# error and rt window = 20 seconds. 
+M <- 205.073893223
+H <- 1.007276
+MH <- M - H
+## Define INDOLELACTIC ACID peak mz range considering 10 ppm error
+error <- 10
+mmu_min <- MH-(error*MH/1e6)
+mmu_max <- MH+(error*MH/1e6)
+mzr <- c(mmu_min, mmu_max)
+## Define taurine peak rt range width 
+apex.indolelacticacid <- 9.25*60 
+rt.window <- 20 #max rt width in seconds
+rtr <- c(apex.indolelacticacid-rt.window, apex.indolelacticacid+rt.window)
+## Plot raw data to check whether there is taurine
+IDfeaturesMS1_indolelacticacid <- IDfeaturesMS1 |> as.data.frame() |> filter(between (mzmed, mzr[1], mzr[2])) |> filter(between (rtmed, rtr[1], rtr[2])) |> select(c(1,4,24:31))
+
+#FIGURE 27
+
+IDfeaturesMS1_indolelacticacid
+
+#TRYPTAMINE
+##Data based on following scientific references:
+#https://hmdb.ca/metabolites/HMDB0000303
+#Visualization and Identification of Neurotransmitters in Crustacean Brain via Multifaceted Mass Spectrometric Approaches
+#Qinjingwen Cao, Yijia Wang, Bingming Chen, Lingjun Li
+#ACS Chem. Neurosci. 2019, 10, 3, 1222–1229
+#Publication Date:February 5, 2019
+#https://doi.org/10.1021/acschemneuro.8b00730
+
+IDfeaturesMS1 <- matchedData(matched_featuresH)
+# Find TRYPTAMINE putative ID in MS1 considering 10 ppm error and rt window = 20 seconds. 
+M <- 160.100048394 
+H <- 1.007276
+MH <- M - H
+## Define TRYPTAMINE peak mz range considering 10 ppm error
+error <- 10
+mmu_min <- MH-(error*MH/1e6)
+mmu_max <- MH+(error*MH/1e6)
+mzr <- c(mmu_min, mmu_max)
+## Define TRYPTAMINE peak rt range width 
+apex.tryptamine <- 5.92*60
+rt.window <- 20 #max rt width in seconds
+rtr <- c(apex.tryptamine-rt.window, apex.tryptamine+rt.window)
+## Plot raw data to check whether there is tryptamine
+IDfeaturesMS1_tryptamine <- IDfeaturesMS1 |> as.data.frame() |> filter(between (mzmed, mzr[1], mzr[2])) |> filter(between (rtmed, rtr[1], rtr[2])) |> select(c(1,4,24:31))
+#FIGURE 28
+IDfeaturesMS1_tryptamine
+
+#5-HYDROXYINDOLE
+#Data based on following scientific references: https://hmdb.ca/metabolites/HMDB0059805
+#J Endocr Soc. 2021 Aug 1; 5(8): bvab106.
+#Published online 2021 Jun 8. doi: 10.1210/jendso/bvab106
+#PMCID: PMC8237842
+#PMID: 34195530
+#Comparison of Serum and Urinary 5-Hydroxyindoleacetic Acid as Biomarker for Neuroendocrine Neoplasms
+#Anna Becker,1 Camilla Schalin-Jäntti,2 and Outi Itkonen
+ 
+IDfeaturesMS1 <- matchedData(matched_featuresH)
+# Find 5-hydroxyindole putative ID in MS1 considering 10 ppm
+# error and rt window = 20 seconds. 
+M <- 	133.052763851 
+H <- 1.007276
+MH <- M - H
+## Define 5-hydroxyindole peak mz range considering 10 ppm error
+error <- 10
+mmu_min <- MH-(error*MH/1e6)
+mmu_max <- MH+(error*MH/1e6)
+mzr <- c(mmu_min, mmu_max)
+## Define 5-hydroxyindole peak rt range width 
+apex.hydroxyindole <- 5.92*60
+rt.window <- 20 #max rt width in seconds
+rtr <- c(apex.hydroxyindole-rt.window, apex.hydroxyindole+rt.window)
+## Plot raw data to check whether there is hydroxyindole
+IDfeaturesMS1_hydroxyindole <- IDfeaturesMS1 |>as.data.frame() |> filter(between (mzmed, mzr[1], mzr[2])) |> filter(between (rtmed, rtr[1], rtr[2])) |> select(c(1,4,24:31))
+
+#FIGURE 29
+IDfeaturesMS1_hydroxyindole 
+#Due to low match numbers, no data is available to plot and mimic authors Figure 3F
+
+#ENVIPAT
+#Using enviPat package to predict the theoretical isotopic distribution for at least one of the 3 metabolites of authors 
+#Figure 3F (tryptamine) #detected in ESI(-) mode as [M-H]- adduct.
+
+#Find tryptamine molecular formula in HMDB "C10H12N2"
+predicted.tryptamine.pattern<-enviPat::isopattern(isotopes,"C10H12N2",threshold=1,plotit=FALSE,charge=-1,emass=0.00054858,algo=1)
+predicted.tryptamine.pattern$C10H12N2
+
+# Using "Spectra" package to create spectrum from isotopic prediction
+sp_tryptamine_predicted <- DataFrame(msLevel = c(1L),polarity = c(0L), id = c("HMDB0000303 "),name = c("Tryptamine"))
+
+## Assign m/z and intensity values.
+#sp_tryptamine_predicted$mz <- list(predicted.tryptamine.pattern$C10H12N2[c(1,3,5), 1])
+#Error in predicted.tryptamine.pattern$C10H12N2[c(1, 3, 5), 1] : 
+#  subscript out of bounds
+sp_tryptamine_predicted$mz <- list(predicted.tryptamine.pattern$C10H12N2)
+sp_tryptamine_predicted$intensity <- list(predicted.tryptamine.pattern$C10H12N2) 
+
+#theoretical <- Spectra(sp_tryptamine_predicted) |>setBackend(MsBackendDataFrame()) 
+#Error in x[[1L]] : subscript out of bounds
+#theoretical$name <- "Predicted"
+
+#Run cliqueMS anotation on our featured data
+#Find cliques
+set.seed(2)
+#ex.cliqueGroups <- getCliques(xdata, filter = TRUE)
+#Creating anClique object
+#Creating network
+#Error: Cannot allocate vector of size 651.4 Gb  
+
+#Find isotopes
+#ex.Isotopes <- getIsotopes(ex.cliqueGroups, ppm = 10)
+# Load positive adducts information
+#data(positive.adinfo)
+#head(positive.adinfo)
+#ex.Adducts <- getAnnotation(ex.Isotopes, ppm = 10,adinfo = positive.adinfo, polarity = "positive",normalizeScore = TRUE)
+#Retrieve annotation results
+#REScliqueMS <- getPeaklistanClique(ex.Adducts)
+#Define the rt and m/z range of tryptamine peak 
+#M <- 160.100048394
+#H <- 1.007276
+#MH <- M + H
+#' Define tryptamine peak mz range considering 10 ppm error
+error <- 10
+mmu_min <- MH-(error*MH/1e6)
+mmu_max <- MH+(error*MH/1e6)
+mzr <- c(mmu_min, mmu_max)
+#' Define tryptamine peak rt range width 
+apex.tryptamine <- 5.92*60
+rt.window <- 20 #max rt width in seconds
+rtr <- c(apex.tryptamine-rt.window, apex.tryptamine+rt.window)
+
+#Plot raw data to check whether there is tryptamine
+
+#REScliqueMS |> filter(between (mz, mzr[1], mzr[2])) |> filter(between (rt, rtr[1], rtr[2]))
+
+#Annotations for TRYPTAMINE in the entire dataset
+#REScliqueMS[grep("1800", REScliqueMS$isotope),])
+
+```
+
+
+##EXERCISE 4.2:
+
+#EXERCISE 4.2.1:Why do to think authors solely use protonated/deprotonated adducts?
+
+"The most important qualitative rule to predict which fragment will retain the charge and how abundant will be in the spectrum is 
+to investigate the proton affinity of their neutral counterparts.Field’s rule states that the higher is the proton affinity of a neutral, 
+the higher is the intensity of its charged form in the spectrum. There is much less information on the fragmentation processes of deprotonated molecules in the literature partly because the formation of deprotonated molecules is usually limited to compounds possessing acidic protons (the bile acids and L-aspartic acid of our study)or compounds that could generate such ones by tautomerism. Other reasons include the poor understanding of fragmentation processes and technical difficulties. The signal intensity for ES− is usually lower, therefore whenever possible, use of ES+ is recommended. However, ES− is of high importance e.g., for the characterization of flavonoids, oligosaccharides, carboxylic acids, 
+sulfonamides, oligonucleotides and rarely peptides. For a more comprehensive characterization, additional types of fragmentation can be explored: 
+For exammple, the fragmentation characteristics of an [M + zH]z+ type protonated molecule (even-electron pre-cursor) and an M+ radical type molecular ion(odd-electro precursor) is significantly different. OE ions tend to fragment at more random sites, while even-electron ions usually produce less but more stable fragments by cleavages at the thermochemically least stable bonds. It is also possible to form an odd-electron ion from an ESI-generated multiply charged even-electron ion precursor with methods of electron capture dissociation (ECD) or electron transfer dissociation (ETD) which nowadays have widely-used application in sequencing of peptides and other biomolecule"
+
+#EXERCISE 4.2.2: What would you suggest for a more comprehensive characterization instead? How would you suggest to improve the preprint?
+
+The pre-print and related study can be improved by incorporating into the experimental design more appropriate selection of solvents (polar, non-polar) and expanding separation strategies to include those based on a multitude of properties (size, hydro-, hydrophilicity, relative volatility, negative and positive charge, solublity, affinity, color. This pre-print study can also be improved by furthering the current integratation of analysis of lipophilic compounds by reversed-phase liquid chromatography (RP-LC)/MS with analysis of water-soluble compounds by hydrophilic interaction liquid chromatography (HILIC)/MS to improve coverage, Method optimization and selection of the most optimal instrumentation platforms and ionization modes can also exapand coverage and detection limits.A reference-data-driven analysis to match metabolomics tandem mass spectrometry (MS/MS)data against metadata-annotated source data as a pseudo-MS/MS reference library has been proposed to incease the low 10 % annotation rate of human untargeted metabolomics studies. This appraoch can be applied to this current study, as it has been demonstrated to increase MS/MS spectral usage 5.1-fold over conventional structural MS/MS library matches and allows empirical assessment of dietary patterns from untargeted data. EnviPat::check_chemform() tools can be used to get closer to level 2 confidence when comparing spectra with background of similar empirical isotopic distributions informs  The study and the metabolic community can be bolstered by gradually overcoming challenges associated with with MS/MS data interpretation, database content, isomer resolution, identification confidence, and FDR estimation.Specifically, and inceasing the number of 
+Validations of retention times and MS/MS fragmentation data with a reference standards.
+
+#Citation 1: Steckel A, Schlosser G. An Organic Chemist's Guide to Electrospray Mass Spectrometric Structure Elucidation. Molecules.
+#2019 Feb 10;24(3):611. doi: 10.3390/molecules24030611. PMID: 30744143; PMCID: PMC6384780.
+#Citation 2: #Gauglitz, J.M., West, K.A., Bittremieux, W. et al. Enhancing untargeted metabolomics using metadata-based source annotation. 
+#Nat Biotechnol 40, 1774–1779 (2022). https://doi.org/10.1038/s41587-022-01368-1
+#https://doi.org/10.1038/s41587-022-01368-1
+#Citation 3Souza AL, Patti GJ. A Protocol for Untargeted Metabolomic Analysis: From Sample Preparation to Data Processing. 
+#Methods Mol Biol. 2021;2276:357-382. doi: 10.1007/978-1-0716-1266-8_27. PMID: 34060055; PMCID: PMC9284939.
+
+
+ 
