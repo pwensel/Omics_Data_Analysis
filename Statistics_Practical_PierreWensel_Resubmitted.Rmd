@@ -1,0 +1,1853 @@
+---
+title: "Bioinformatics Statistics Practical"
+author: "Pierre Wensel"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    highlight: default
+    number_sections: true
+    theme: readable
+    toc: true
+    toc_depth: 2
+    toc_float: true
+  pdf_document:
+    toc: true
+    toc_depth: '2'
+---
+
+```{r setup, include=TRUE}
+
+# install.packages("epitools")
+# install.packages("dplyr")
+# BiocManager::install("multtest") # install bioconductor package "multtest" that contains "golub" data
+# install.packages("outliers") 
+# install.packages("lmtest")
+# install.packages("sandwich")
+# install.packages("glmnet")
+# BiocManager::install("ROCR")
+# BiocManager::install("CMA")
+# install.packages("randomForest")
+# install.packages("survival")
+# install.packages("KMsurv")
+# install.packages("glmnet")
+# install.packages("penalized")
+# install.packages("PerformanceAnalytics")
+# install.packages("corrr")
+# install.packages("dplyr")
+# install.packages("psych")
+# install.packages("corrplot")
+# install.packages("GGally")
+# install.packages("ggcorrplot")
+# BiocManager::install("multtest")
+# install.packages(c("factoextra", "dendextend"))
+# BiocManager::install("ComplexHeatmap")
+# install.packages("caret")
+# install.packages("FactoMineR")
+# install.packages("klaR")
+# install.packages("cba")
+# install.packages("factoextra")
+# install.packages("lmtest")
+# install.packages("tidyverse")
+# BiocManager::install("CMA")
+# install.packages("randomForest")
+# BiocManager::install("Biobase")
+library("dplyr")
+library(factoextra)
+library(glmnet)
+library(survival)
+library(KMsurv)
+library(caret)
+library(klaR) #For kmode
+library(cba) #For ROCK 
+library(CMA)
+library(Biobase)
+library(randomForest)
+library(corrplot)
+library(tinytex)
+
+```
+
+
+**QUESTION 1**
+Describe the main characteristics of the dataset: perform a univariate descriptive analysis of the first 6 variables      
+```{r Q1}
+#Input the text file using read.table, assigning the input to a variable pdata.
+viral34 <- read.table("viral.34.txt", header=T, sep="")
+
+#Dataframe confirmed
+class(viral34) 
+str(viral34)
+#There are 140 observations (rows), 57 variables (columns)
+dim(viral34) 
+nrow(viral34)
+ncol(viral34)
+names(viral34)
+head(viral34)
+summary(viral34)
+
+#Based on these preliminary function calls, original data frame described in the pdata in roblem statement as follows:
+#The data correspond to a follow-up study of 140 patients suffering from acute diarrhea of different infectious etiologies. 
+#The main goal of this study is to identify a biomarker signature for discriminating viral from bacterial infections. 
+# Variables:
+# infection: Indicator of viral infection:
+# (1 = viral infection; 0 = bacterial infection)
+# stime: Time with symptoms (days).
+# sind: Indicator of symptoms: 
+#   (1 = symptoms finished; 0 = symptoms remain)
+# Gender: (1= male, 0 = female).
+# hosp: Indicator of hospitalization (1= hospitalization, 0 = no hospitalization).
+# Age: Patient age at diagnosis (years).
+# Ancestry: Three different ancestry groups (A, B, C)
+# Columns from 8 to 57: Gene expression measurements of 50 genes
+# Use a significance level alpha=0.05 for each individual test and multiple testing 
+# correction whenever necessary.
+
+#Check numeric columns
+is.numeric(viral34$Age)
+#Check for missing values in data
+is.na (viral34)
+sum(is.na(viral34))
+# Exclude rows that have missing data in ANY variable (na.exclude())
+#viral34_o <- na.omit(viral34)
+
+#Scale Gene Expression Values
+viral34_s<-scale(viral34[,8:57])
+dim(viral34_s)
+#ncol(viral34_s)
+#head(viral34_s)
+
+# # TEST SCALING
+# gs<-(viral34$GSTM3-mean(viral34$GSTM3))/sd(viral34$GSTM3)
+# head(gs)
+# bs<-(viral34$BBC3-mean(viral34$BBC3))/sd(viral34$BBC3)
+# head(bs)
+
+#Log transformation of Gene Expression Values
+viral34_l <- log(3+viral34[8:57])
+dim(viral34_l)
+head(viral34_l)
+
+#Had challenges with log transformations as negative numbers were obtained and processed, leading to errors:
+#viral34[, 8:57] <- log1p(viral34[8:57]) #computes log(1+x)
+#viral34[,8:57] <- lapply(viral34[,8:57], log)
+#warnings()
+#50: In lapply(X = x, FUN = .Generic, ...) : NaNs produced
+
+# #Test Log transformation
+# log_col1<-log(3+viral34$GSTM3)
+# head(log_col1)
+# log_col2<-log(3+viral34$BBC3)
+# head(log_col2)
+
+#Column bind the Original dataframe, Standardized G.E dataframe, and Log-Transformed G.E. dataframe
+viral34_c <- cbind(viral34,viral34_s, viral34_l) 
+dim(viral34_c)
+head(viral34_c)
+
+#Rename standardized gene expression column variables by appending "_s"
+names(viral34_c)[58:107] <- paste0(names(viral34_c)[58:107], "_s")
+#Rename standardized gene expression column variables by appending "_l"
+names(viral34_c)[108:157] <- paste0(names(viral34_c)[108:157], "_l")
+
+#FACTORING:
+#Transform the column variable infection into a factor:
+viral34_c$infection <- factor(viral34_c$infection, levels=c(0,1), labels = c("bacterial_infection", "viral_infection"))
+
+#Transform the column variable sind into a factor:
+viral34_c$sind <- factor(viral34_c$sind, levels=c(0,1), labels = c("symptoms_remain", "symptoms_finished"))
+
+#Transform the column variable gender into a factor:
+viral34_c$gender <- factor(viral34_c$gender, levels=c(0,1), labels = c("female", "male"))
+
+#Transform the column variable gender into a factor:
+viral34_c$hosp<- factor(viral34_c$hosp, levels=c(0,1), labels = c("no_hospitalization", "hospitalization"))
+
+summary(viral34_c) #Created baseline dataframe for use of subsequent univariate analysis:
+head(viral34_c)
+
+#PERFORMING UNIVARIATE analysis of the first 6 columns:
+#ATTACH/DETACH METHODS NOT USED HERE:
+
+#INFECTION
+#Categorical data that Had numerical value 1 or 0 and was later factored
+
+# absolute frequencies
+freq.cc<-table(viral34_c$infection)  
+freq.cc
+
+#bacterial_infection     viral_infection 
+#69                  71 
+
+# relative frequencies
+relfreq.cc<-freq.cc/nrow(viral34_c)  
+relfreq.cc
+#bacterial_infection     viral_infection 
+#0.4928571           0.5071429
+
+# relative frequencies (ALTERNATIVE METHOD)
+relfreq.cc<-prop.table(table(viral34_c$infection))  
+relfreq.cc
+
+# function cbinb() is used to combine two tables
+freqtablecc<-cbind(freq.cc, relfreq.cc)     
+freqtablecc
+options(digits=4)
+freqtablecc
+
+#freq.cc relfreq.cc
+#bacterial_infection      69     0.4929
+#viral_infection          71     0.5071
+
+barplot(freq.cc)
+barplot(relfreq.cc, xlab="status", ylab="relative frequency", names.arg=c("bacterial_infection", "viral_infection"), col=c("green", "red"))
+
+pie(relfreq.cc, labels=c("bacterial_infection", "viral_infection"),col=c("green", "red"))
+
+
+#AGE
+#Age is a continuous, numerical variable
+#Summary statistics
+# mean or average
+mean(viral34_c$age)  
+## [1] 44.25
+# median
+median(viral34_c$age)   
+## [1] 45
+# range
+max(viral34_c$age)-min(viral34_c$age)  
+## [1] 27
+# variance
+var(viral34_c$age)  
+## [1] 28.81
+# standard deviation
+sd(viral34_c$age)  
+## [1] 5.367
+# coeficient of variation (in percentage) 
+100*sd(viral34_c$age)/mean(viral34_c$age)      
+## [1] 12.13
+# minimum, first , second and third quartiles, and maximum 
+quantile(viral34_c$age)    
+
+#0%  25%  50%  75% 100% 
+#26   41   45   49   53 
+# interquartile range
+IQR(viral34_c$age)   
+## [1]  8
+
+# 35% and 63% quantiles 
+quantile(viral34_c$age, c(0.35,0.63))   
+#35% 63% 
+#  42  47 
+
+#Histogram
+hist(viral34_c$age)
+
+#Boxplot:
+boxplot(viral34_c$age, ylab="gene expression", col="blue")
+#Error in plot.new() : figure margins too large
+
+#Density Function
+hist(viral34_c$age)
+density<-density(viral34_c$age)
+plot(density)
+#Error in plot.new() : figure margins too large
+
+#Empirical cumulative distribution
+f<-ecdf(viral34_c$age)
+plot(f)
+#Error in plot.new() : figure margins too large
+
+#Testing for outliers in age:
+library(outliers)
+grubbs.test(viral34_c$age)
+# Grubbs test for one outlier
+# 
+# data:  viral34_c$age
+# G = 3.40, U = 0.92, p-value = 0.04
+# alternative hypothesis: lowest value 26 is an outlier
+
+#Testing for normal distribution of age:
+shapiro.test(viral34_c$age)
+# Shapiro-Wilk normality test
+# 
+# data:  viral34_c$age
+# W = 0.96, p-value = 3e-04
+#Age is not normally distriuted with p<=0.05
+
+
+#HOSP
+#Hospitalization is Categorical data that Had numerical value 1 or 0 and was earlier factored. 
+#Indicator of hospitalization (1= hospitalization, 0 = no hospitalization).
+
+# absolute frequencies
+freq.cc<-table(viral34_c$hosp)  
+freq.cc
+
+# no_hospitalization    hospitalization 
+# 73                 67 
+
+# relative frequencies
+relfreq.cc<-freq.cc/nrow(viral34_c)  
+relfreq.cc
+# no_hospitalization    hospitalization 
+# 0.5214             0.4786 
+
+# relative frequencies (ALTERNATIVE METHOD)
+relfreq.cc<-prop.table(table(viral34_c$hosp))  
+relfreq.cc
+
+# function cbinb() is used to combine two tables 
+freqtablecc<-cbind(freq.cc, relfreq.cc)    
+freqtablecc
+options(digits=4)
+freqtablecc
+# freq.cc relfreq.cc
+# no_hospitalization      73     0.5214
+# hospitalization         67     0.4786
+
+barplot(freq.cc)
+barplot(relfreq.cc, xlab="status", ylab="relative frequency", names.arg=c("hospitalization", "no_hospitalization"), col=c("green", "red"))
+
+pie(relfreq.cc, labels=c("hospitalization", "no_hospitalization"),col=c("green", "red"))
+
+
+#stime
+#symptom time is a continuous, numerical variable with units of days
+#Summary statistics
+
+# mean or average
+mean(viral34_c$stime)  
+# median
+## 7.356
+median(viral34_c$stime)   
+## 6.962
+
+# range
+max(viral34_c$stime)-min(viral34_c$stime) 
+## 17.6
+var(viral34_c$stime)  # variance
+## 16.42
+sd(viral34_c$stime)  # standard deviation
+## 4.052
+# coeficient of variation (in percentage)
+100*sd(viral34_c$stime)/mean(viral34_c$stime)       
+## 55.08
+# minimum, first , second and third quartiles, and maximum 
+quantile(viral34_c$stime)    
+# 0%      25%      50%      75%     100% 
+# 0.05476  4.69541  6.96235 10.05681 17.65914 
+
+# interquartile range
+IQR(viral34_c$stime)   
+## 5.361
+# 35% and 63% quantiles 
+quantile(viral34_c$stime, c(0.35,0.63))   
+
+# 35%   63% 
+#   5.566 8.432 
+#Histogram
+hist(viral34_c$stime)
+
+#Boxplot:
+boxplot(viral34_c$stime, ylab="stime", col="blue")
+#Error in plot.new() : figure margins too large
+
+#Density Function
+hist(viral34_c$stime)
+density<-density(viral34_c$stime)
+plot(density)
+#Error in plot.new() : figure margins too large
+
+#Empirical cumulative distribution
+f<-ecdf(viral34_c$stime)
+plot(f)
+#Error in plot.new() : figure margins too large
+
+#Testing for outliers:
+
+grubbs.test(viral34_c$stime)
+
+
+#Testing for normal distribution of age:
+shapiro.test(viral34_c$stime)
+
+
+#sind
+#sind is Categorical data that Had numerical value 1 or 0 and was earlier factored.Indicator of symptoms: 
+# (1 = symptoms finished; 0 = symptoms remain)
+
+# absolute frequencies
+freq.cc<-table(viral34_c$sind)  
+freq.cc
+# symptoms_remain symptoms_finished 
+# 93                47
+
+# relative frequencies
+relfreq.cc<-freq.cc/nrow(viral34_c)  
+relfreq.cc
+# symptoms_remain symptoms_finished 
+# 0.6643            0.3357 
+
+# relative frequencies (ALTERNATIVE METHOD)
+relfreq.cc<-prop.table(table(viral34_c$sind))  
+relfreq.cc
+
+# function cbinb() is used to combine two tables 
+freqtablecc<-cbind(freq.cc, relfreq.cc)    
+freqtablecc
+options(digits=4)
+freqtablecc
+
+# freq.cc relfreq.cc
+# symptoms_remain        93     0.6643
+# symptoms_finished      47     0.3357
+
+barplot(freq.cc)
+barplot(relfreq.cc, xlab="status", ylab="relative frequency", names.arg=c("symptoms_remain", "symptoms_finished"), col=c("green", "red"))
+
+pie(relfreq.cc, labels=c("symptoms_remain", "symptoms_finished"),col=c("green", "red"))
+
+
+#gender
+#gender is Categorical data that Had numerical value 1 or 0 and was earlier factored as "female" (base case) and "male"
+# absolute frequencies
+freq.cc<-table(viral34_c$gender)  
+freq.cc
+# female   male 
+# 62     78   
+
+# relative frequencies
+relfreq.cc<-freq.cc/nrow(viral34_c)  
+relfreq.cc
+# female   male 
+# 0.4429 0.5571
+
+# relative frequencies (ALTERNATIVE METHOD)
+relfreq.cc<-prop.table(table(viral34_c$gender))  
+relfreq.cc
+
+# function cbinb() is used to combine two tables 
+freqtablecc<-cbind(freq.cc, relfreq.cc)    
+freqtablecc
+options(digits=4)
+freqtablecc
+# freq.cc relfreq.cc
+# female      62     0.4429
+# male        78     0.5571
+
+barplot(freq.cc)
+barplot(relfreq.cc, xlab="status", ylab="relative frequency", names.arg=c("female", "male"), col=c("green", "red"))
+
+pie(relfreq.cc, labels=c("female", "male"),col=c("green", "red"))
+
+#BRIEF BIVARIATE ANALYSIS
+#Continuous+Continuous
+plot(viral34_c$age, viral34_c$stime)
+abline(lm(viral34_c$stime ~ viral34_c$age))
+
+#Continuous+Categorical
+tapply(viral34_c$age, viral34_c$gender, mean) 
+boxplot(viral34_c$age~viral34_c$gender)
+ 
+```
+
+
+
+**QUESTION 2**
+Perform hierarchical clustering of (scaled) gene expression levels and explore possible relationships between genes. How many gene clusters are observed?
+Performing hierarchical clustering of all GENES (NEED TO TRANSPOSE MATRIX FOR GENE ROWS!) according to all genes using Euclidean distance and average linkage algorithm
+Note: After standardization of gene expression levels, Euclidean and Correlation Distance are the same. Euclidean and Manhattan distance
+measure absolute differences between vectors (gene expression levels), but Euclidean is less robust towards outliers
+```{r Q2}
+class(viral34_c)
+#[1] "data.frame"
+
+str(viral34_c)
+dim(viral34_c)
+
+hc_genes1<-hclust(dist(t(viral34_c[58:107]),method="euclidean"),method="average")
+plot(hc_genes1)
+ 
+
+#Performing hierarchical clustering of all genes according to all genes using Euclidean distance and (superior?) ward.D2 linkage algorithm
+hc_genes2<-hclust(dist(t(viral34_c[58:107]),method="euclidean"),method="ward.D2")
+plot(hc_genes2)
+ 
+
+# Cut in five groups
+# label size     
+fviz_dend(hc_genes2, k = 5,         
+          cex = 0.5,           
+          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07", "green"),
+          color_labels_by_k = TRUE,  # color labels by groups
+          ggtheme = theme_gray(),
+          main = "Dendrogram - ward.D2",
+          xlab = "Objects", ylab = "Distance", sub = ""
+          #Change theme
+)
+ 
+
+
+```
+
+**QUESTION 3**
+Perform hierarchical clustering of INDIVIDUALS according to their (scaled) gene  expression levels and explore possible relationships between them. 
+How many clusters of individuals are observed? Check visually whether the clustering is related to infection, gender, hospitalization or ancestry.
+```{r Q3}
+#Performing hierarchical clustering of all individuals according to all scaled genes using Euclidean distance and average linkage algorithm
+hc_individuals1<-hclust(dist((viral34_c[1:140,58:107]),method="euclidean"),method="average")
+plot(hc_individuals1)
+ 
+
+#Performing hierarchical clustering of all individuals according to all scaled genes using Euclidean distance and (superior?) ward.D2 linkage algorithm
+hc_individuals2<-hclust(dist((viral34_c[1:140,58:107]),method="euclidean"),method="ward.D2")
+plot(hc_individuals2)
+ 
+
+
+# Cut in seven groups
+# label size
+fviz_dend(hc_individuals2, k = 7,         
+          cex = 0.5,                 
+          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07", "green", "orange", "purple"),
+          color_labels_by_k = TRUE,  # color labels by groups
+          ggtheme = theme_gray(),
+          main = "Dendrogram - ward.D2",
+          xlab = "Objects", ylab = "Distance", sub = ""
+          # Change theme
+)
+ 
+
+
+#Creating labels to visually check whether the clustering is related to infection, gender, hospitalization or ancestry.
+#x<-viral34_c$infection
+#x
+# x<-t(viral34_c$infection)
+# x
+# #SIMILAR TO LECTURE NOTE: x<-factor(golub.cl, labels=c("*","ALL"))
+#plot(hc_individuals2, labels=x)
+ 
+
+
+plot(hc_individuals2, labels=viral34_c$infection)#NOT RELATED
+plot(hc_individuals2, labels=viral34_c$gender)#NOT RELATED
+plot(hc_individuals2, labels=viral34_c$hosp)#NOT RELATED
+plot(hc_individuals2, labels=viral34_c$ancestry)#NOT RELATED
+ 
+
+#Counted 6 Individual Gene clusters infection, gender, hospitalization or ancestry.
+#I observed no relationships between clusters and 
+
+
+``` 
+
+**QUESTION 4**
+Perform K-means clustering with k=2 and test whether the clustering is associated to (a) the kind of infection and (b) the risk of hospitalization. Interpret the results.
+```{r Q4}
+#Applying kmeans to continuous variables (same dataframe as before: X = [all rows, columns corresponding to genes]. 
+#Since problem statement doesn't specify, I still used here the transposed continuous scaled gene expression column variables
+
+#Clustering individuals according to gene expression
+kdata<-(viral34_c[, 58:107])
+kcluster<-kmeans(kdata, 2, nstart=10)
+kcluster
+
+# Results:
+# Within cluster sum of squares by cluster:
+#   [1] 117.4392 156.1455
+# (between_SS / total_SS =  20.3 %)
+
+#Based on results, K-means clustering with 2 clusters of sizes 76, 64
+
+
+kmeans(kdata,2)$cluster
+
+
+
+#Running summary of dataframe provides proportions of categorical variables that may coincide with these 2 cluster sizes:
+summary(viral34_c)
+#Based on summary results, categorical proportions are as follows:
+#infection:
+#bacterial_infection:69
+#viral_infection    :71
+
+#sind
+#symptoms_remain  :93
+#symptoms_finished:47 
+
+#gender
+#female:62
+#male  :78
+
+#no_hospitalization:73
+#hospitalization   :67
+
+#Based on these results, it appears that clustering is more associated with sind (symptoms remain vs. finished) compared
+#to type of infection or risk of hospitalization
+
+#Clustering is graphically depicted as follows:
+
+#plot(kdata, col=kcluster$cluster)
+#points(kcluster$centers, col=1:2, pch=8, cex=2)
+ 
+#Error in `plot.new()`:
+#! figure margins too large
+
+
+#Clustering individuals according to the kind of infection (nned to factor)
+#k_infection<-as.factor(viral34_c$infection)
+#kcluster_infection<-kmeans(k_infection, 2, nstart=10)
+#kcluster_infection
+#Clustering individuals according to the risk of hospitalization (nned to factor)
+#k_hosp<-as.factor(viral34_c$hosp)
+#kcluster_hosp<-kmeans(k_hosp, 2, nstart=10)
+#kcluster_hosp
+
+#If the factored column variables of infection and hospitalization are used for 2 kmeans clustering,
+# the following error message is generated: Error in kmeans(kdata, 2, nstart = 10) : more cluster centers than distinct data points.
+#In addition: Warning message:In storage.mode(x) <- "double" : NAs introduced by coercion
+#This occurs because kmeans uses the mean of data points for clustering and our dataset is made of plain text or other type of factors 
+#(i.e not numbers). The 2 raw unfactored data columns can be used, or the data can be preprocessed via various ways for Categorical dataset, 
+#(e.g. "one hot encoding" method that transforms the 2 category column into 4 multiple columns that each indicate if the sample 
+#belongs to the relevant category (i.e column with 3 ancestries will get 3 new binary (1 or 0) columns. 
+# Other methods include ROCK algorithm (kaggle notebook)and "Kmode" which is similar to kmeans for categories and implemented in R.
+
+#https://www.kaggle.com/code/vijjikiran/clustering-of-categorical-data/report
+# k-means is the classical unsupervised clustering algorithm for numerical data. But computing the euclidean distance and the means in k-means algorithm doesn’t fare well with categorical data. 
+#So instead, I will therefore run categorical data through the following algorithms for clustering -
+# (1)By applying one-hot encoding, the data will be converted to numeric data and then it will be run thru k-means.
+# (2)The data will be run through k-modes algorithm that uses modes of categorical attributes instead of the means in k-means for clustering of categorical data.
+# (3)The data will be run through the Rock(Robust clustering using links) algorithm that is designed for categorical variables - actually the categorical data is converted to booleans in this approach.
+# I will evaluate how the purity of the clusters, a simple evaluative measure, is different for the each of the algorithms.
+#Purity of clustering is a simple measure of the accuracy, which is between 0 and 1. 0 indicates poor clustering, and 1 indicates perfect clustering.
+
+#Demonstrating 2 alternative methods: 
+#Method#1: Extract 2 unfactored categorical columns (infection and hospitalization) from original viral34 dataframe into new dataframe used for 2 kmeans
+kdata1<-viral34[,c(1,5)]
+head(kdata1)
+kcluster1<-kmeans(kdata1, 2, nstart=10)
+kcluster1
+
+#Results: Within cluster sum of squares by cluster:
+#   [1] 17.32394 16.20290
+# (between_SS / total_SS =  52.1 %)
+plot(kdata1, col=kcluster1$cluster)
+points(kcluster1$centers, col=1:2, pch=8, cex=2)
+ 
+#YES! The clustering is visually related to infection risk and hostpitalization status#############
+
+#Method#2: "Hot-start"
+library(caret)
+
+# Dummify data
+dmy <- dummyVars(" ~ .", viral34_c)
+trsf <- data.frame(predict(dmy, newdata = viral34_c))
+#Show what dataframe looks like
+kdata2<-trsf[,c(1,2,8,9)]
+head(kdata2)
+#Since 4 columns of categorical data were transformed, using 4 kmeans
+kcluster2<-kmeans(kdata2, 4, nstart=10)
+kcluster2
+
+#Results: K-means clustering with 4 clusters of sizes 43, 30, 41, 26
+
+#I will later demonstrate two additional clustering approaches using the following libraries tools:
+#For kmode
+library(klaR) 
+#For ROCK
+library(cba)
+
+``` 
+
+**QUESTION 5**
+Perform PCA for exploring possible relationships BETWEEN INDIVIDUALS according to their (scaled) GENE EXPRESSION LEVELS. Provide the variance explained plot. How 
+much variability is explained by the first two principal components? Which is the eigen-value of PC1 and how can be interpreted? Check, using concentration ellipses, whether PCA projections of individuals are associated to infection, gender, hospitalization or ancestry. Which are the 10 genes that most contribute 
+to PC1 and PC2? (follow similar steps as in section 1.5.8 in "Solutions Exercises section 2"). Discuss the results.
+```{r Q5}
+X<-viral34_c[,58:107]
+pcaX <-prcomp(X, scale =TRUE)
+summary(pcaX)
+
+
+#PC1 accounts for 0.252, PC2 accounts for 0.08771. PC3 accounts for 0.0565 for a total of 0.3962 of variance
+plot(pcaX)
+ 
+
+#Plotting the data on the first two principal components
+PC1 <- pcaX$x[,1]
+PC2 <- pcaX$x[,2]
+plot(PC1,PC2)
+ 
+
+#Plotting the data on the first two principal components and color the points according to “infection”
+plot(PC1,PC2, col=viral34_c$infection, main = "Viral or Bacterial Infection")
+legend("bottomleft", col=1:2, legend=levels(viral34_c$infection), pch=1, cex=0.7)
+#There is no clear association between PCA projections and “infection”
+
+#Plotting the data on the first two principal components and color the points according to “gender”
+plot(PC1,PC2, col=viral34_c$gender, main = "Female or Male")
+legend("bottomleft", col=1:2, legend=levels(viral34_c$gender), pch=1, cex=0.7)
+#There is no clear association between PCA projections and “gender”
+
+#Plotting the data on the first two principal components and color the points according to “hosp”
+plot(PC1,PC2, col=viral34_c$hosp, main = "Hospitalization or No Hospitalization")
+legend("bottomleft", col=1:2, legend=levels(viral34_c$hosp), pch=1, cex=0.7)
+#There is no clear association between PCA projections and “hosp”
+
+#Plotting the data on the first two principal components and color the points according to “ancestry”
+#plot(PC1,PC2, col=viral34_c$ancestry, main = "A, B, or C")
+#legend("bottomleft", col=factor(viral34_c$ancestry), legend=levels(viral34_c$ancestry), pch=1, cex=0.7)
+#There is no clear association between PCA projections and “ancestry”
+
+#To make the visualization of results easier we use the function ‘PCA’ from FactoMineR package that allows limiting the number of PC to be used:
+library(FactoMineR)
+pcaX<-PCA(X, scale.unit = TRUE, ncp = 3) # We  use the first 3 PC
+ 
+
+library("factoextra")
+#PCA relies on eigenvalue decomposition of the covariance matrix. The following function provides the eigenvalues, proportions of variance explained and cumulative variance for each principal component.
+eig.val<- get_eigenvalue(pcaX)
+head(eig.val)
+
+#Results:
+
+
+# Interpretation:
+# The total variance of a matrix is the sum of the variances of the variables. When variables are scaled, the total variance is equal to the number 
+# of variables (57 in our case) since the variance of each (scaled) original variable is 1.The eigen value of PC(i) is equal to the variance of PC(i). 
+# Thus, an eigen value larger than 1 indicates that PC accounts for more variance than the (scaled) original variables. For instance, the first eigen value in our dataset is 16.950630 which means that the PC1 accounts for as much variation as 17 original variables.
+# The proportion of variance explained is obtained by dividing the variance (eigen value) by the total variance: 
+# % variance = 100·eigen_value/total_variance. In our case: % variance explained by PC1 = 100·12.598858/57 = 25.197716%  
+
+#Variance explained plot:
+
+fviz_eig(pcaX, addlabels = TRUE, ylim = c(0, 30))
+
+#Variables plot:
+fviz_pca_var(pcaX, col.var = "black")
+ 
+#The following function provides a list of matrices containing all the relevant information in a PCA, like the contributions of each variable to each PC ($contrib):
+var <- get_pca_var(pcaX)
+var
+ 
+
+library(corrplot)
+#We order the results according to the contribution value and restrict the 10 most important variables for PC1. Now we can see the list of the most relevant genes for PC1:
+corrplot(var$contrib[order(var$contrib[,1],decreasing = T)[1:10],], is.corr=FALSE)
+
+
+#Results: The 10 most important genes for PC1=ALDH4A1, GMPS, RFC4, TSPYL5, NUSAP1, CDC42BPA, ORC6L, AYTL2, C16orf61, FGF18, (COL4A2 in DIM3?)
+
+#We order the results according to the contribution value and restrict the 10 most important variables for PC2:
+corrplot(var$contrib[order(var$contrib[,2],decreasing = T)[1:10],], is.corr=FALSE)
+#The 10 most important genes for PC2= SERF1A, WISP1,FLT1,FBXo31,GPR180,ZNF533,EXT1,DCK,ORC6L, Contig40831_RC
+
+#We order the results according to the contribution value and restrict the 10 most important variables for PC3:
+corrplot(var$contrib[order(var$contrib[,3],decreasing = T)[1:10],], is.corr=FALSE)
+#The 10 most important genes for PC3= SLC2A3,COL4A2,PECI,GPR126,ZNF533,MMP9,MTDH,Contig63649_RC,MELK, OXCT1
+
+#We can also plot the most important variables to PC1 as follows:
+fviz_contrib(pcaX, choice = "var", axes = 1, top = 10)
+
+#Contributions of variables to PC2
+fviz_contrib(pcaX, choice = "var", axes = 2, top = 10)
+
+#Plot of the variables according to contrib values:
+fviz_pca_var(pcaX, col.var = "contrib",
+             gradient.cols = c(0,0,4,4),#c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+)
+
+
+#Graphical representation of individuals
+ind <- get_pca_ind(pcaX)
+ind
+
+fviz_pca_ind(pcaX)
+
+#We check whether the PCA projection of individuals is related to the “infection” variable by adding concentration ellipses by event indicator. 
+#We see that the two ellipses overlap which means no association between infection type and PCA projections according to gene expression profiles.
+
+
+# show points only (nbut not "text")
+# color by groups NOT AS FACTOR!!!!!!!!!
+# Concentration ellipses
+fviz_pca_ind(pcaX,
+             geom.ind = "point", 
+             col.ind = viral34_c$infection, 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, 
+             legend.title = "infection"
+)
+
+#Now we check whether the PCA projection of individuals is related to the “gender” variable by adding concentration ellipses 
+#by gender indicator. We see that the two ellipses are separated which implies different gene expression profiles between 
+#positive and negative individuals. Large values of PC1 and small values of PC2 are related to gender negative.
+
+# Concentration ellipses
+# color by groups
+# show points only (nbut not "text")
+fviz_pca_ind(pcaX,
+             geom.ind = "point", 
+             col.ind = viral34_c$gender, 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, 
+             legend.title = "gender"
+)
+
+#Now we check whether the PCA projection of individuals is related to the “hospitalization”: Some separation
+fviz_pca_ind(pcaX,
+             geom.ind = "point", # show points only (nbut not "text")
+             col.ind = viral34_c$hosp, # color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, # Concentration ellipses
+             legend.title = "hosp"
+)
+
+#Now we check whether the PCA projection of individuals is related to the “ancestry”: Some separation
+fviz_pca_ind(pcaX,
+             geom.ind = "point", # show points only (nbut not "text")
+             col.ind = viral34_c$ancestry, # color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, # Concentration ellipses
+             legend.title = "ancestry"
+)
+
+
+
+```
+
+
+**QUESTION 6**
+Perform a nice heatmap with dendrograms for genes and individuals, individuals divided in two groups according to k-means (k=2), and annotations for infection and hospitalization (similar to the one proposed in section 1.4 in "Solutions Exercises section 2"). 
+```{r Q6}
+heatmap(as.matrix(viral34_c[,8:57])) # Using NON-SCALED gene expression levels
+
+#Using instead ‘Heatmap()’ function from ComplexHeatmap package with examples at following website:
+#https://www.datanovia.com/en/lessons/heatmap-in-r-static-and-interactive-visualization/
+
+library(ComplexHeatmap)
+#Using already-scaled gene expression levels
+# Text size for row names
+#title of legend
+# individuals are divided into 4 groups using Kmeans clustering
+set.seed(1234) 
+Heatmap(viral34_c[,58:107], 
+        name = "viral34_c", 
+        column_title = "genes", row_title = "individuals",
+        row_names_gp = gpar(fontsize = 7), 
+        km=2, 
+        show_row_names = FALSE, show_column_names = T
+)+Heatmap(viral34_c$infection, name = "infection", width = unit(5, "mm"), col=c(2,1))+  Heatmap(viral34_c$hosp, name = "hosp", width = unit(5, "mm"), col=c(4,5))
+
+
+
+#Now repeating with transposition:
+heatmap(as.matrix(t(viral34_c[,8:57]))) # Using NON-SCALED gene expression levels
+#set.seed(1234) 
+#Heatmap(t(viral34_c[,58:107]), 
+#        name = "viral34_c", 
+#        column_title = "individuals", row_title = "genes",
+#        row_names_gp = gpar(fontsize = 7), 
+#        km=2, 
+#        show_row_names = FALSE, show_column_names = T
+#)+Heatmap(viral34_c$infection, name = "infection", width = unit(5, "mm"), col=c(2,1))+  Heatmap(viral34_c$hosp, name = "hosp", width = unit(5, "mm"), col=c(4,5))
+
+#OBSERVATIONS FROM HEATMAP: 
+#I observed 4 gene clusters and 2 individual clusters with following observations:
+#(LEGEND: GC=GENE CLUSTER, IC=INDIVIDUAL CLUSTER, Over=Over-expressed(red), Under=Underexpressed(blue))
+#GC#1(Left of Dendogram): IC#1 (Left of Dendogram)=Over, IC#2=Under
+#GC#2: IC#1=Under, IC#2=Over
+#GC#3: IC#1=Over, IC#2=Under
+#GC#4:For IC#1: DTL=Under, Contig35251_RC=Under, RUNDC1=Over, BBC3=Under, ECT2=Over, MTDH=Under, ZNF533=Over
+#GC#4: For IC#2: DTL=Over, (right CONTIG35251_RC=Over, Rest=Under), DCK=Under, MTDH=Over, BBC3=Under,MELK=Over 
+#IC#1: Left=Viral, Hospitalization; Middle=Bacterial, Right=Viral
+#IC#2: (Right=Hospitalization, Viral Infection), Left= Bacterial, Middle: No Hospitalization
+
+# You can see that the last cluster is strongly associated to negative ER and is characterized by low expression of the genes 
+# on the right and high expression of the rest. The other three cluster mainly correspond to ER positive individuals. 
+# We can observe that in the first cluster, that is characterized by high expression of the genes on the right and 
+# low expression of the rest, is the cluster with few events, i.e. this gene expression pattern is associated to better prognosis.
+
+library(glmnet)
+library(penalized)
+#EXAMINING BRIEFLY REALTIONSHIPS BETWEEN 10 genes:
+
+
+# PerformanceAnalytics::chart.Correlation() #Argument R missing?
+# corrr::network_plot() #Argument rdf missing?
+# psych::pairs.panels() #Argument x missing?
+# corrplot::corrplot.mixed() #Argument corr missing?
+# GGally::ggpairs() #Argument data missing?
+# ggcorrplot::ggcorrplot() #Argument corr missing?
+
+library("PerformanceAnalytics")
+chart.Correlation(viral34_c[,8:18], histogram=TRUE, pch=19)
+
+library(corrr)
+network_plot(correlate(viral34_c[,8:18]), min_cor=0.6)
+
+library(dplyr)
+viral34_c[8:18] %>% correlate() %>% network_plot(min_cor=0.6)
+
+library(psych)
+pairs.panels(viral34_c[8:18], scale=TRUE)
+ 
+
+library(corrplot)
+corrplot.mixed(cor(viral34_c[8:18]), order="hclust", tl.col="black")
+
+library(GGally)
+ggpairs(viral34_c[8:18])
+ggcorr(viral34_c[8:18], nbreaks=8, palette='RdGy', label=TRUE, label_size=5, label_color='white')
+
+library(ggcorrplot)
+ggcorrplot(cor(viral34_c[8:18]), p.mat = cor_pmat(mtcars), hc.order=TRUE, type='lower')
+
+
+```
+
+
+**QUESTION 7**
+Test if the mean expression levels of the first gene are different between viral and bacterial infections. An alpha=0.05 is assumed:
+```{r Q7}
+#Testing the following hypothesis:
+#H0=Null Hypothesis: H0: u1=u2
+#H1=Alternative Hypothesis: H1: u1!=u2
+
+#Determine if gene GSTM3 (column#8) is a continuous, numerical variable, for which a mean and sd can be calculated:
+#In general, scale variables for PCA but NOT for t-test, anova, etc, as these methods take advantage of the standard deviation 
+#of the data to implement the analysis
+
+is.numeric(viral34_c$GSTM3)
+
+#Results show this is numeric (TRUE)
+#Determine if non-scaled (raw) expression levels of first gene follows a normal distribution via shapiro.test(x):
+#H0=Null Hypothesis: H0: X~N(u, sig)
+#H1=Alternative Hypothesis: H1: X !~N(u, sig)
+
+shapiro.test(viral34_c$GSTM3)
+##Because the p-value=0.00387<0.05, the non-scaled (raw) expression levels of first gene is not normally distributed
+
+#Determine if Z-normalized/standardized/scaled expression levels of first gene follows a normal distribution via shapiro.test(x):
+#H0=Null Hypothesis: Ho: X~Nu, sig)
+#H1=Alternative Hypothesis: H1: X !~N(u, sig)
+
+shapiro.test(viral34_c$GSTM3_s)
+
+#Because the p-value=0.00387<0.05, the Z-normalized/standardized/scaled expression levels of first gene is not normally distributed
+
+#Determine if log-transformed expression levels of first gene follows a normal distribution via shapiro.test(x):
+
+shapiro.test(viral34_c$GSTM3_l)
+#Because the p-value=0.0463<=0.05 (JUST BARELY!), the log-transformed expression levels of first gene also is not normally distributed
+
+#Since neither GSTM, GSTM3_s or GSTM3_l are normally distributed, we apply a Wilcoxon test:
+wilcox.test(viral34_c$GSTM3 ~ viral34_c$infection)
+#Result: p-value=0.264>0.05
+
+wilcox.test(viral34_c$GSTM3_s ~ viral34_c$infection)
+
+#Result: p-value=0.264>0.05
+
+wilcox.test(viral34_c$GSTM3_l ~ viral34_c$infection)
+
+#Result: p-value=0.264>0.05
+
+# We therefore DO NOT REJECT null hypothesis that means are equal. We conclude that there is NO statistically significant evidence to
+#suggest that the means of first gene are different between viral and bacterial infections are different. 
+
+``` 
+
+**QUESTION 8**
+Test if the mean expression levels of the first gene are different among ancestry groups. An alpha=0.05 is assumed:
+```{r Q8}
+#Testing the following hypothesis:
+#H0=Null Hypothesis: H0: u1=u2=u3 (equality of mean GSTM3 expression levels for all 3 ancestry types )
+#H1=Alternative Hypothesis: H1: u1!=u2!=!u3 (at least 1 of  3 GSTM3 expression levels for all 3 ancestry types means is different)
+#Since GSTM3 gene expression levels  was found to not be normally distributed we apply a Kruskal-Wallis test:
+
+kruskal.test(viral34_c$GSTM3 ~ viral34_c$ancestry)
+
+#Results: p-value=0.7959>0.05
+#Therefore, there is no statistically significant evidence that the mean GSTM3 expression levels are different for all 3 ancestry types.
+#WE do not reject the null hypothesis that these means are equal.
+
+# However, ONLY for demonstration and to be comprehensive here, let's ASSUME that the (log-transformed) GSTM3_l expression levels were found previously to be normally
+#distributed (as the p-value from shapiro.test was almost > 0.05). Therefore, in this case, we would perform a
+#1-WAY ANOVA test as follows:One-factor ANOVAis as test for association between a continuous variable Y and a factor (categorical variable) X with k categories. The statistical process is derived 
+#from the decomposition of the total variability in two components: the variability between groups and the variability within groups. Under the ANOVA assumptions, the ratio of the two sources of variability follows the F 
+#distribution.
+
+#First we test whether the variances are equal (homoscedasticity)
+
+library(lmtest)
+bptest(lm(viral34_c$GSTM3_l ~ viral34_c$ancestry),studentize = F)
+
+#Results: p-value=0.1116>0.05. Therefore, homoscesaticity is fulfilled.
+
+#Then, we perform one-factor ANOVA:
+
+summary(aov(viral34_c$GSTM3_l ~ viral34_c$ancestry))
+
+#Results: Because Pr(>F)=0.938>0.05, we conclude that there is statistically no significant 
+#difference in population mean GSTM3 gene expression levels between 3 ancestral groups A, B, C
+
+#The higher the F-value, the lower the corresponding p-value. With p-value > threshold (e.g. alpha= . 05), 
+#we cannot reject the null hypothesis of the ANOVA and cannot conclude that there is a statistically significant 
+#difference between ancestry group means.
+
+#We can follow-up by 
+tapply(viral34_c$GSTM3_l,viral34_c$ancestry, mean)
+
+#Also:
+boxplot(viral34_c$GSTM3_l~viral34_c$ancestry)
+
+#These confirm that the expression means among ancestries are similar
+
+#If we had rejected and found means to be different, then TukeyHSD(anova1factor) can be used:
+
+
+``` 
+
+**QUESTION 9**
+Test whether mean expression levels of the first and second genes are equal for viral infections.An alpha=0.05 is assumed:
+```{r Q9}
+##This is paired data since there is a pair of values (gene 1 and gene2) for each individual. Because earlier it was
+#shown that Gene 1 expression values are not normally distributed, I will use the wilcox test for testing equality of
+#means for paired, non-normally-distributed data as alternative to to the t-test for equality of means for normally distributed data.
+#Hypothesis:
+#H0: distribution A = Distribution B 
+#H1: distribution A = Distribution B 
+
+#Preliminarily, I tested to see if non-scaled Gene #2 expression values were also normally distributed:
+
+shapiro.test(viral34_c$RP5.860F19.3)
+
+#Results: Because, p-value=0.01577<=0.01577, we conclude that Gene#2 Expression values are also not normally distributed
+
+#Furthermore, I tested for correlation between the 2 raw (non-scaled) gene extression levels 
+#Hypothesis: 
+#Ho: rho = 0 Gene1 and Gene2 are uncorrelated
+#H1: rho not equal 0 Gene1 and Gene2 are correlated
+
+#Using Spearman correlation for non-normally distributed observations
+
+cor(viral34_c$GSTM3,viral34_c$RP5.860F19.3, method="spearman")
+
+cor.test(viral34_c$GSTM3,viral34_c$RP5.860F19.3,method="spearman")
+
+#Results indicated a p-value=2.2E-16<=0.05 and also a high correlation coefficient of 0.612, suggesting that
+#both genes are correlated and allowing us to reject null hypothesis that they are uncorrelated
+
+#Finally, I tested for equality of Gene1 mean expression values to Gene mean expression vales for viral infection.
+#Because I am only evaluating mean gene 1 and 2 expression values for viral infection, I first created a subset dataframe to
+#contain these 2 columns: #slice(), select(1:3)
+
+library(tidyverse)
+
+subviral34 <- viral34_c %>% filter(infection == "viral_infection")
+
+#Now, I test whether non-scaled mean expression levels of the first and second genes are equal for viral infections using 
+#Wilcoxon rank test for the equality of two means for paired data:
+
+wilcox.test(subviral34$GSTM3,subviral34$RP5.860F19.3,paired=T)
+
+#Results show that because p-value=0.4581>0.05, we cannot reject the null hypothesis that the
+#population mean expression levels of the first and second genes are equal. There is not enough statistically significant
+#evidence to suggest that means are different.
+
+
+``` 
+
+**QUESTION 10**
+Perform a nonparametric test for association of the kind of infection (viral or bacterial) and the risk of hospitalization.Provide the OR of the risk of hospitalization for viral vs bacterial infections.
+
+```{r Q10}
+#Using females as reference group based on default alphabetical order and to yield an OR>1:
+
+library("epitools")
+# var1=risk factor, var2=hospitalization_status 
+table<-table(viral34_c$infection, viral34_c$hosp) 
+table
+# OR of having the disease(Y=1) for the category in the 
+oddsratio(table) 
+# 2nd row with respect to reference group (1rst row)
+
+#Based on results, the Odds Ratio (OR) = 2.242376 suggests that viral infections are 2.24X higher risk of hospitalization compared
+#to bacterial infection.
+
+``` 
+
+**QUESTION 11**
+Test the normality of expression levels of the 50 genes (use function apply). How many genes are not normally distributed and which are their names?
+```{r Q11}
+pvector<-apply(viral34_c[,8:57], 2, function(x) shapiro.test(x)$p.value)
+pvector
+
+#Counting the genes that are not normally distributed:
+length(which(pvector<=0.05))
+#Based on results, there are 19 genes that are not normally distributed
+
+#Getting names of genes that are not normally distributed:
+non_normal_genes<-(names(which(pvector<=0.05)))
+non_normal_genes
+
+``` 
+
+**QUESTION 12**
+Identify those genes that are differentially expressed between viral and bacterial infections (use function apply). 
+Create a function that checks whether the gene expression levels are normally distributed or not and, accordingly, applies the 
+most appropriate test for comparing gene expression levels between viral and bacterial infections. Adjust the p-values for multiple 
+testing according to an fdr threshold equal to 0.1. Interpret the results.
+```{r Q12}
+#Function will ultimately perform a statistical test for the equality of two means (gene expression levels with viral vs. bacterial infection)
+# I tried this alternave with "apply" but was not successful:
+#pvector<-apply(viral34_c[,8:57], 2, function(x) shapiro.test(x)$p.value)
+
+
+diffex<-function(df, alpha){
+  #Initialize empty variables that will contain the pvalues of the k different t-tests
+  pfinal<-NULL   
+  pnormal<-vector()
+  pvar<-c()
+  pval<-vector()
+  #pval<-numeric()
+  for(i in 8:57){
+    pnormal<-shapiro.test(df[,i])$p.value
+    if(pnormal<=alpha){
+      pval<-wilcox.test(df[,i] ~ df$infection)$p.value
+      names(pval) <- colnames(df)[i]
+    }
+    else {
+      pvar<-var.test(df[,i]~df$infection)$p.value
+      if(pvar<=alpha){
+        pval<-t.test(df[,i] ~ df$infection, var.equal=F)$p.value
+        names(pval) <- colnames(df)[i]
+      }
+      else{
+        pval<-t.test(df[,i] ~ df$infection, var.equal=T)$p.value
+        names(pval) <- colnames(df)[i]
+      }
+    }
+    pfinal<-c(pval,pfinal) # Add new pval to the pfinal vector
+  } 
+  #close loop  
+  #Adjusting p-values using conservative Bonferroni multiple testing correction
+  #pfinal_bonferroni<-p.adjust(pfinal, method = "bonferroni", n = length(pfinal))
+  #Adjusting p-values using using Benjamini & Hochberg multiple testing correction
+  pfinal_fdr<-p.adjust(pfinal, method = "fdr", n = length(pfinal))
+  #q=0.1 for FDR()????????????????????????????????
+  names(pfinal_fdr) <- names(pfinal)
+  return(pfinal_fdr)   
+}#close function
+
+#Note, could not find FDR function allowing specificatio of fdr=0.1 cutoff thershold=
+#Getting all calculated, adjusted p-values from the statistical tests:
+pvalues<-(diffex(viral34_c, 0.05))
+pvalues
+
+#Getting number of significant results obtained after Benjamini & Hochberg correction:
+num_sig<-sum((diffex(viral34_c, 0.05)<0.05))
+num_sig
+
+#Getting names of genes whose non-scaled expression levels are significantly different among infection type:
+diff_genes_names<-(names(which(diffex(viral34_c, 0.05)<=0.05)))
+diff_genes_names
+
+#Based on results, there are 5 such nd genes: "DIAPH3.2", "TSPYL5",   "GPR126",   "ALDH4A1",  "MMP9"
+
+
+``` 
+
+**QUESTION 13**
+Consider a regression model for the kind of infection as a function of gender, age and ancestry and the first 10 genes (scaled).
+Use stepwise variable selection and denote the selected model as “best.model”. Interpret the obtained model.
+```{r Q13}
+#BACKGROUND: The logistic regression is used with dichotomous dependent variables.A generalized regression model is to be fitted because the response variable "type of infection: is a categorical variable with binomial 
+#probabilistic outcome (Y=0/Y=1) where the probability is bound by an interval of [0,1], necessitating a logit transformation. 
+
+#The FULL fitted model will be obtained first before step-wise variable selection:
+
+library(glmnet)
+
+#In general, it is recommended to center the age predictor by subtracting the mean:
+m<-mean(viral34_c$age)
+m
+##Results: [1] 44.25
+
+c.age<-(viral34_c$age)-m
+mean(c.age) 
+
+#This corrected age column is added to the viral34_c dataframe:
+viral34_ca<-cbind(viral34_c,c.age)
+summary(viral34_ca)
+dim(viral34_ca)
+
+#Assigning the dependent, factored categorical variable "infection type) to a variable Y
+Y<-viral34_c$infection
+Y
+
+#Index Directory of Co-Variate Columns in dataframe viral34_ca
+# gender=4
+# age=6
+# ancestry=7,
+# First scaled 10 genes=58-67
+# c.age=148
+
+#Obtaining first the FULL logistic model with “infection” as dependent variable and variables (including UNCORRECTED age) as covariates:
+model1<-glm(Y~., data=viral34_c[,c(4,6,7,58:67)],family="binomial")
+model1
+summary(model1)
+
+# Null deviance: 194.05  on 139  degrees of freedom
+# Residual deviance: 140.11  on 125  degrees of freedom
+# AIC: 170.11
+
+#Obtaining first the FULL logistic model with “infection” as dependent variable and variables (including CORRECTED age) as covariates:
+model1a<-glm(Y~., data=viral34_ca[,c(4,148,7,58:67)],family="binomial")
+model1a
+summary(model1a)
+
+# Null deviance: 194.05  on 139  degrees of freedom
+# Residual deviance: 138.41  on 125  degrees of freedom
+# AIC: 168.41
+
+#Comparing these two FULL models, it is evident that the deviance and AIC was lower after "correcting" for age. Therefore, age correction will
+#used for subsequent variable selection:
+
+#When the number of variables is large, stepwise selection of variables is used to remove those variables that are not related to the outcome:
+#Given a multivariate FULL, age-adjusted logistic model, Forward selection, Backward elimination, and Stepwise regression variable selection 
+#will be used to remove variables that are unimportant and unassociated with the infection-type response variable:
+#Comparing the fit of different models will require adjusting for the number k of covariates in the model because the largest or 
+#more complex model always provides the smallest R2. Other adjusted measures include: 
+#AIC (Akaike information criterion): Deviance+2(k+1)
+#BIC (Bayesian information criterion): Deviance+ ln(n)*(k+1)
+#The model with the smallest AIC or BIC will be chosen as best.model for Problem#14 Validation
+
+
+#Variable Selection:
+
+#Performing forward selection:
+forwardmodel1<-step(model1,direction="forward") 
+#Results show an AIC=170.11 after forward selection:
+# Start:  AIC=170.11
+# 
+# Y ~ gender + age + ancestry + GSTM3_s + RP5.860F19.3_s + BBC3_s + 
+#   MMP9_s + Contig35251_RC_s + Contig40831_RC_s + ALDH4A1_s + 
+#   SERF1A_s + SCUBE2_s + MTDH_s
+
+summary(forwardmodel1) # best forward model
+
+
+#Performing backward selection:
+backwardmodel1<-step(model1,direction="backward") 
+
+#Results show reduced AIC=156.84 and reduction of covariates to only ancestry, scaled Gene expression MMP9_s, and scaled gene expression
+#ALDH4A1_s (Alcohol Dehydrogenase) after forward selection:
+
+# Step:  AIC=156.84
+# Y ~ ancestry + MMP9_s + ALDH4A1_s
+# 
+# Df Deviance    AIC
+# <none>           146.84 156.84
+# - ancestry   2   151.94 157.94
+# - ALDH4A1_s  1   175.43 183.43
+# - MMP9_s     1   180.59 188.59
+
+summary(backwardmodel1) 
+
+#Performing both selection:
+#backward-forward (both) selection 
+bothmodel1<-step(model1,direction="both") 
+
+#Results show again reduced AIC=156.84
+
+# Step:  AIC=156.84
+# Y ~ ancestry + MMP9_s + ALDH4A1_s
+# 
+# Df Deviance    AIC
+# <none>                  146.84 156.84
+# + Contig35251_RC_s  1   145.32 157.32
+# + gender            1   145.51 157.51
+# + BBC3_s            1   145.62 157.62
+# + SCUBE2_s          1   145.68 157.68
+# - ancestry          2   151.94 157.94
+# + Contig40831_RC_s  1   146.03 158.03
+# + SERF1A_s          1   146.45 158.45
+# + MTDH_s            1   146.70 158.70
+# + GSTM3_s           1   146.72 158.72
+# + age               1   146.79 158.79
+# + RP5.860F19.3_s    1   146.81 158.81
+# - ALDH4A1_s         1   175.43 183.43
+# - MMP9_s            1   180.59 188.59
+
+#Also, summary: # best backward-forward model
+summary(bothmodel1)
+
+#The summary of the best.model provides both individual t-tests for the coefficients of the model and the F global test of relationship.
+#The summary suggest high F-values and lowered p-values to render the reduced # variables more significant influences on response variable type of infection.
+#Results: Neither ancestry are significant (MMP9_s and ALDH4A1_s scaled gene expression levels are significant as their
+#individualized t-test-derived p-values<0.05. The global F test is strongly significant.
+
+#INTERSTINGLY, MMP9_s and ALDH4A1_s were among the 5 genes whose non-scaled expression levels 
+#are significantly different among infection type:
+
+#As specified by problem statement, the selected "bothmodel1" model is designated as “best.model”. 
+best.model<-bothmodel1
+
+#Checking if assignment succeeded:
+summary(best.model)
+
+##Prediction of Y (infection type) for new values of X using best.model
+#Specifying the values of the predictor in a dataframe and using function predict():
+xnew<-data.frame(viral34_c$ALDH4A1_s==c(3000),viral34_c$MMP9_s==c(4000), viral34_c$ancestry=="B")
+#predict(best.model,xnew)
+
+
+#Interpret the best.model: Beyond having reduced # variables and AIC compared to initial full models, 
+#I analyzed the best.model and then compare the initial full model as follows:
+
+#The confidence interval for the coefficients of the logistic regression are obtained for best.model with confint():
+confint(best.model) # 95% CI for the coefficients
+
+#Results:
+#                 2.5 %      97.5 %
+#   (Intercept) -0.1190425 0.838300536
+# ancestryB   -1.8670032 0.260294895
+# ancestryC   -2.7535011 0.005861916
+# MMP9_s       0.8520343 1.986676277
+# ALDH4A1_s    0.7528095 1.863357741
+
+#For initial full model1:
+confint(model1)
+
+#Results:
+#The confidence intervals are as follows:
+#                     2.5 %       97.5 %
+#   (Intercept)      -16.8783763  4.176943697
+# gendermale        -1.7366550  0.084578365
+# FGF18_l           -3.1467453 16.292373530
+# ancestryB         -1.8674360  0.413323412
+# ancestryC         -2.9066239  0.009822317
+# GSTM3_s           -0.8763169  0.312640234
+# RP5.860F19.3_s    -0.5235649  0.682053857
+# BBC3_s            -0.6109021  0.315461511
+# MMP9_s             0.8316892  2.158612070
+# Contig35251_RC_s  -0.2238803  0.730512696
+# Contig40831_RC_s  -0.2913917  0.672645907
+# ALDH4A1_s          0.6376632  2.262095823
+# SERF1A_s          -0.3904859  0.623907157
+# SCUBE2_s          -0.8499912  0.159190457
+# MTDH_s            -0.5289403  0.518853142
+
+#The odds-ratios for initial full model1 are obtained by exponentiating the output of the logistic regression as follows:
+exp(coef(model1)) # exponentiated coefficients
+
+#Results:
+# (Intercept)       gendermale              age        ancestryB        ancestryC          GSTM3_s   RP5.860F19.3_s           BBC3_s           MMP9_s 
+# 2.1748696        0.4934761        0.9992451        0.5158839        0.2529307        0.8347582        1.1183530        0.8122408        4.1542930 
+# Contig35251_RC_s Contig40831_RC_s        ALDH4A1_s         SERF1A_s         SCUBE2_s           MTDH_s 
+# 1.2578561        1.1527205        4.9599179        1.1233387        0.7546956        0.9903049 
+
+#The odds-ratios for new best.model are obtained by exponentiating the output of the logistic regression as follows:
+exp(coef(best.model)) # exponentiated coefficients
+
+#Results: 
+# (Intercept)   ancestryB   ancestryC      MMP9_s   ALDH4A1_s 
+# 1.4206505   0.4603976   0.2702748   3.9539104   3.5486461 
+
+
+#The confidence intervals of the odds-ratios for initial model1 are obtained as follows:
+exp(confint(model1)) # 95% CI for exponentiated coefficients
+
+#Results:
+#                       2.5 %    97.5 %
+#   (Intercept)      0.06584851 76.239374
+# gendermale       0.19734262  1.190003
+# age              0.92139629  1.083045
+# ancestryB        0.16115836  1.542126
+# ancestryC        0.05584396  0.993642
+# GSTM3_s          0.46316860  1.465646
+# RP5.860F19.3_s   0.61044232  1.982982
+# BBC3_s           0.51386096  1.259417
+# MMP9_s           2.26839190  8.450376
+# Contig35251_RC_s 0.77987874  2.042943
+# Contig40831_RC_s 0.71578394  1.872111
+# ALDH4A1_s        2.45244687 11.215133
+# SERF1A_s         0.66222621  1.893463
+# SCUBE2_s         0.45314697  1.228043
+# MTDH_s           0.59115500  1.683696
+# > 
+
+#The confidence intervals of the odds-ratios for new best.model are obtained as follows:
+exp(confint(best.model)) # 95% CI for exponentiated coefficients
+
+#Results:
+#                   2.5 %   97.5 %
+#   (Intercept) 0.88777010 2.312434
+# ancestryB   0.15458623 1.297313
+# ancestryC   0.06370444 1.005879
+# MMP9_s      2.34441120 7.291259
+# ALDH4A1_s   2.12295614 6.445342
+
+#The goodness-of-fit of the intial model1 is preliminarily checked via its deviance:
+deviance(model1)
+
+#Results:
+#[1] 140.1082
+
+#The goodness-of-fit of the new best.model is preliminarily checked via its deviance:
+deviance(best.model)
+
+#Results:
+#[1]146.8426
+
+AIC(best.model)
+#Result:[1] 156.8426
+BIC(best.model)
+#Result:[1] 171.5508
+
+#The best.model "Deviance" was higher. However, the 2 models cannot be compared by this criteria as they possess different number of variables. Therefore,
+#they will be instead compared definitively via ANOVA as follows:
+anova(model1,best.model)
+
+
+#Results:
+# Analysis of Deviance Table
+# 
+# Model 1: Y ~ gender + age + ancestry + GSTM3_s + RP5.860F19.3_s + BBC3_s + 
+#   MMP9_s + Contig35251_RC_s + Contig40831_RC_s + ALDH4A1_s + 
+#   SERF1A_s + SCUBE2_s + MTDH_s
+# Model 2: Y ~ ancestry + MMP9_s + ALDH4A1_s
+# Resid. Df Resid. Dev  Df Deviance
+# 1       125     140.11             
+# 2       135     146.84 -10  -6.7344
+
+
+#Two covariates interact when the effect of the first covariate on the dependent variable depends on the value of the second covariate.
+#To determine  INTERACTION and if the two CONTINUOUS covariates MMP9_s and ALDH4A1_s interacted and if best.model needs to be adjusted to account for interaction:
+plot(viral34_c$ALDH4A1_s , viral34_c$MMP9_s, col=viral34_c$infection)
+#abline(lm(viral34_c$MMP9_s[viral34_c$infection==0]~viral34_c$ALDH4A1_s[infection==0]), col=1)
+#abline(lm(viral34_c$MMP9_s[viral34_c$infection==1]~viral34_c$ALDH4A1_s[infection==1]), col=2)
+
+#Based on plot, the points uniformly distributed and there appears to be interaction tht needs to be accounted for.
+
+#I performed linear correlation to get least sum of squares, residuals R2 and determine any linear correlation:
+#Linear correlation between non-normally distributed gene expression values of 
+#For non-normally distributed 2 genes: 
+
+cor(viral34_c$MMP9_s, viral34_c$ALDH4A1_s, method="spearman")
+#Results: [1] -0.3096543
+
+#A new bestest.model was proposed to be included the interaction between the two scaled gene expression levels of MMP9_s and ALDH1_s:
+bestest.model<-glm(Y~., data=viral34_c[,c(7,11,14,(11*14))],family="binomial")
+summary(bestest.model)
+
+#This resulted in an even lower AIC=154.77
+#There likely needs to be included the interaction between the two scaled gene expression levels of MMP9_s and ALDH1_s:
+
+``` 
+
+**QUESTION 14**
+Analyze the classification ability of “best.model” (ROC curve and AUC) according to the following schemes:
+a. Apparent validation of “best.model” using the same data that was used for model building.
+b. Cross-validation with k = 5 for “best.model”.
+c. Though the cv-classification is better than the apparent classification, it still is over-estimating the real classification of "best-model".
+Discuss why and how to obtain a more accurate classification estimation (slides 262:264).
+```{r Q14}
+#(PART a)Apparent validation of “best.model” using the same data that was used for model building.
+
+#BACKGROUND: Since the fitted best.model logistic function is increasing, we get the rank of individuals via the linear predictor RS (risk score).
+#Larger values of RS are associated to higher risk of viral infection (Y=1) compared to bacterial infection (Y=0).
+#Individuals can be classified into different risk categories according to this risk score based on a threshold value.
+
+# Classification accuracy for the best.model is depicted by Sensitivity and Specificity:
+# Sensitivity is the proportion of positives that are correctly predicted.
+# Specificity is the proportion of negatives that are correctly predicted
+
+#Classification accuracy depends on the threshold considered for the predicted probabilities or the linear predictions. 
+
+
+#The method of dividing data into training and test sets to estimate the classifier performance is an important concern
+#When validating our best.model model and assessing prediction or classification accuracy of statistical models in future samples. .
+#When building a machine learning model using some data, data is often split into training and validation/test sets. 
+#The training set is used to train the model, and the validation/test set is used to validate it on data it has never seen before. 
+#This can be performed in a single train/test split of the samples (The classic approach is to do a simple 80%-20% split) or other means.
+#Specifically, this can be done via apparent validation, internal validation, and external validation.
+#Apparent validation measures the predictive accuracy of the model on the same sample used for building the model. “Apparent” classification accuracy 
+#is where  accuracy is measured on the same data that was used to build the models (train data). 
+#“Apparent” classification accuracy overestimates real prediction classification accuracy of the best.model.
+#Internal validation (which includes bootstrap, cross-validation, and split-sample validation), splits the available data in training 
+#an test sample.External validation measures the accuracy of the model in an independent sample.
+
+#APPARENT VALIDATION: 
+
+library(glmnet)
+library(ROCR)
+
+#The Risk Score is obtained as sum of linear predictors as follows:
+#lp<-best.model$linear.predictors
+#lp<-best.model$linear.predictors
+
+#PLEASE NOTE, I UNFORTUNATELY HAD THIS ALL WORKING BEFORE WITH model1a (NOT the bestest.model from before) as I worked on PROBLEM 14 BEFORE PROBLEM 13. Therefore, I left
+#the code as it was so as to not break any more of what I had graphing out OK and operating smoothly until the lst hour. Apologies for the mess here:
+lp<-model1a$linear.predictors
+
+#Exploring the apparent classification accuracy of the above best.model (ROC curve and AUC)
+#The ROC curve provides a graphical representation of the classification accuracy of a model for all possible thresholds. 
+#The AUC, area under the ROC curve, is a numerical summary of the ROC curve. AUC near 1 corresponds to high classification accuracy while 
+#AUC near 0.5 corresponds to very poor classification accuracy
+
+#Generating ROC Curve, where TP rate (sensitivity) is plotted against FP rate (1-specificity):
+pred <- prediction(lp, Y)
+perf <- performance(pred, "tpr", "fpr" )
+plot(perf)
+abline(a=0, b= 1)
+title("ROC curve")
+
+#Area Under the ROC curve (AUC) provides a measure of discrimination of the Risk Score among viral-infected (Y=1) and 
+#bacterial-infected (Y=0) individuals: AUC = P[RS(Y= 1) > RS(Y= 0)]. Generating AUC:
+
+(auc<-slot(performance(pred,"auc"), "y.values")[[1]])
+#[1] 0.8399673
+
+#In this apparent classification, we obtained an ROC curve ABOVE the diagonal and an AUC GREATER than 0.5. 
+#Therefore, we DID NOT change the sign of the linear predictor (lp):
+
+#(PART b) Cross-validation with k = 5 for “best.model”:
+
+#BACKGROUND: Some citing https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10346713/ and neptune.ai
+#Cross-validation is a re-sampling method that uses different portions of the data to test and train a model on different iterations. 
+#In cross-validation, more than one split is done(e.g. K number of splits each called a folds).There are many strategies to create these folds with.
+#The goal of cross-validation is to test the model's ability to predict new data that was not used in estimating it, in order to flag problems 
+#like overfitting or selection bias[10] and to give an insight on how the model will generalize to an independent dataset (i.e., an unknown dataset, 
+#for instance from a real problem). The most common CV technique is k-fold CV, where the full dataset is randomly partitioned into k subsets of samples, and one of those subsets is 
+#retained for testing the classifier, while the remaining k-1 subsets comprise the training set. This process is repeated k times until all subsets 
+#(and thus, all individual samples) have been used for testing the classifier exactly once. The overall classifier performance is then estimated as the 
+#average of the resulting k classification accuracies from each step of the CV. Because there can be significant variation in the accuracy obtained with 
+#different train/test splits, this method yields a more generalizable estimate of classifier performance than taking just a single split
+
+#The cross-validation (AI/ML) algorithm is as follows:
+#1.Divide the dataset into two parts: one for training, other for testing
+#2.Train the model on the training set
+#3.Validate the model on the test set
+#4.Repeat 1-3 steps a couple of times. This number depends on the CV method
+
+#k-Fold cross-validation minimizes the disadvantages of the hold-out method. k-Fold introduces a new way of splitting the dataset 
+#which helps to overcome the “test only once bottleneck”.It is generally better to use k-Fold technique instead of hold-out. 
+#By direct comparison, k-Fold gives a more stable and trustworthy result since training and testing is performed on several different parts of the 
+#dataset. The overall score can be made even more robust by increasing the number of folds to test the model on many different sub-datasets.
+#Certain scenarios in which cross-validation becomes necessary include limited dataset,dependent data points,cons of single metric, and hyperparameter tuning:
+#Still, k-Fold method has a disadvantage whereby increasing k results in training more models and the training process might be really expensive and time-consuming.
+
+#Performing cross-validation to obtain the internal classification accuracy of the above best.model (ROC curve and AUC):
+
+K<-5
+n<- nrow(viral34_c)  #number of individuals=140
+#Random assignment of each individual into one 
+fold<-sample(as.numeric(cut((1:n),breaks = K)))  
+
+pred <- NULL #Vector of predictions
+#NEED TO COMMENT OUT FOLLOWING CODE AS I AM NOW GETTING ERROR AFTER CODE EXECUTION:
+#for(i in 1:K){
+  # Test indices 
+ # indTest <- which(fold==i)   
+  # Train indices
+  #indTrain <- which(fold!=i)  
+ # model.i<-glm(Y[indTrain]~., data=viral34_c[indTrain,c(4,6,158,58:67)],family="binomial")
+  # Adjust the model with training data
+  # Predicts test data at step i. PLEASE NOT I USED THE MODEL1A parameters columns in dataframe instead of superior and later-derived bestest.model
+ # pred.i <- predict(model.i, newdata=viral34_c[indTest,c(4,6,158,58:67)])   
+  #pred[indTest] <- pred.i 
+  # Store predicted values for test data at step i 
+#}  
+
+#Error in `[.data.frame`(viral34_c, indTrain, c(4, 6, 158, 58:67)) : 
+#  undefined columns selected
+
+#This code worked before. But not I get above new error, I need to comment code out for execution:
+
+
+#Generating ROC Curve:
+#pred <- prediction(pred, Y)
+#perf <- performance(pred, "tpr", "fpr" )
+#plot(perf)
+#abline(a=0, b= 1)
+#title("ROC curve")
+
+#Generating AUC
+#(auc<-slot(performance(pred,"auc"), "y.values")[[1]])
+
+#[1] 0.749949
+
+#Evidently, the AUC is lower after cross-Validation.
+
+#(PART c)Though the cv-classification is better than the apparent classification, it still is over-estimating the real classification 
+#of "best-model".Discuss why and how to obtain a more accurate classification estimation (slides 262:264):
+
+#Based on slides #262-264, an incorrect scheme for validation that results in overfitting can be improved upon by different approaches:
+#Among these are to perform variable selection on the training data set (as opposed to complete data set) (Simultaneous model selection and validation) and to repeat the entire process iteratively
+#from 1 to B. For  each variable, there is a percentage of times selected and there is a mean classification accuracy among iterated B models.
+
+#Alternative bootstrap-based validation via resampling with replacement can be performed also. 
+#From a dataset with N samples, No examples are randomly selected with replacement and used for training. 
+#Those not selected for training are used for testing, all repeated for a specified number of folds K.
+#Here, the true error is estimated as the average error rate on test data.
+
+# The following example function performs B bootstrap iterations. At each iteration a new bootstrap sample is obtained (bsample) 
+# and the mean of the bootstrap sample is stored in a vector (mean.vector) of length B that contains the means of the B different bootstrap samples:
+#   
+# bootstrap <- function(data, B){
+#     mean.vector <- NULL
+#     for(b in 1:B) {
+#       bsample <- sample(data,length(data),replace=T)
+#       mean.vector <- c(mean.vector,mean(bsample))
+#     }
+#     return(mean.vector)
+#   }
+# 
+
+
+# Citing some from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10346713/ and wikipedia
+# Again, k-Fold method has a disadvantage whereby increasing k results in training more models and the training process might be really expensive and time-consuming.While k-fold cross-validation is a very commonly used technique for evaluating machine learning algorithms offline, it can present issues with some types 
+# of data when the samples within classes are collected in close proximity in time, without randomization with the other class(es). 
+# For time-series data, the process of randomly dividing all samples into k partitions results in the training and test sets containing samples from the 
+# same class that are highly correlated due to their proximity in time. This violates the assumption of independence that is critical to the validity of 
+# k-fold cross-validation. The result is that the classifier could pick up differences between the classes that are actually just related to this temporal 
+# correlation of some samples, rather than to any true class-related difference.An alternative approach that mitigates this issue in experiments with this 
+# trial structure and associated autocorrelation of samples is to perform block-wise (or trial-wise) cross-validation. In each step of block-wise CV, 
+# the trials are first randomly divided into a number of subsets b. The samples derived from the trials in one subset are held back for testing, while 
+# the samples from the remaining trials are used to train the classifier. This is repeated b times until all trials have appeared in the test set exactly once. 
+# The overall classifier performance is estimated as the average of the b resulting accuracies from each step. This partitioning strategy ensures that all 
+# samples from a single trial always remain together in either the training or test set, and, thus, temporal correlations will not influence the results 
+# as described above for k-fold CV.If performance is described by a single summary statistic, it is possible that the approach described by Politis and Romano as a stationary bootstrap
+#can also help overcome this, where the statistic of the bootstrap needs to accept an interval of the time series and return the summary statistic on it. 
+#The call to the stationary bootstrap needs to specify an appropriate mean interval length.
+
+
+``` 
+
+**QUESTION 15**
+Consider a regression model for the kind of infection as a function of all 50 genes (scaled) and adjusted by age. 
+Perform variable selection with LASSO and interpret the results. [Adjusted by AGE or a function of AGE?]
+```{r Q15}
+# BACKGROUND: A generalized regression model is to be fitted again because the response variable is a categorical variable with binomial 
+# probabilistic outcome (Y=0/Y=1) where the probability is bound by an interval of [0,1], necessitating a logit transformation. 
+# Because the number of covariates ( 50 scaled gene expression levels) is very large, 
+# LASSO will be used to perform penalized regression for variable selection. LASSO estimates for are chosen to minimize 
+# the residual sum of squares, as the OLS approach, but with the additional restriction that the sum of the 
+# coefficients (in absolute value) should not exceed a specified value.This is equivalent to minimizing usual least squares criterion 
+# with a penalty for large coefficient estimates determined by  (lambda), known as the shrinkage parameter. 
+# If the lambda parameter  = 0 the lasso is the same as OLS with all variables included in the 
+# model; as lambda   increases, the restriction on the summed fitted terms is stronger, implying that some 
+# of the coefficients are shrinked to zero and less variables are included in the model.
+# The Function glmnet() performs generalized linear model via penalized maximum likelihood. 
+# With alpha=1 the method performs LASSO penalization, for alpha=0 ridge penalization, and for alpha between 0 and 1, elastic-net penalization. 
+# The function provides the output for a grid of penalization parameters
+
+library(glmnet)
+#scaled gene expression levels are independent variables
+X <- as.matrix(viral34_ca[,58:107]) 
+Y <- viral34_ca[,1] #infection column is dependent variable already previously factored
+
+mlasso <- glmnet(X, Y, standardize=TRUE, alpha=1,family="binomial") #LASSO: alpha=1
+
+#The LASSO pathway is explored with a plot with the numbers in the top of the plot indicating the number of variables included in the model:
+plot(mlasso)
+
+#Before CV, the coefficients of our logistic model are obtained for a specific value of lambda:
+# coefficients of LASSO model with lambda=13
+coef(mlasso, s=13)   
+
+# Cross-validation LASSO is now done to estimate the optimal value of lambda. 
+# Function cv.lasso() provides two possible optimal values for lambda: lambda.min= lambda 
+# providing the minimum MSE (Mean Square Error) or lambda.1se=lambda within 1 s.e. of the minimum  MSE.
+
+set.seed(1234)
+cv.lasso <- cv.glmnet(X, Y, standardize=TRUE,family="binomial")
+plot(cv.lasso)
+
+#The value for lambda.min is obtained as follows:
+cv.lasso$lambda.min
+
+#The model is re-fit using all of the available observations and the selected value of the tuning parameter.
+coef(mlasso, s=cv.lasso$lambda.min)
+
+#The value for lambda.min is obtained as follows:
+cv.lasso$lambda.1se
+#[1] 0.0582
+#The model is re-fit using all of the available observations and the selected value of the tuning parameter.
+coef(mlasso, s=cv.lasso$lambda.1se)
+
+#Resampling methods for logistical model variable selection and validation with CMA package was performed below:
+library(CMA)
+library(Biobase)
+library(randomForest)
+
+genes<-viral34_ca[,sample(58:107)]
+
+Y<-viral34_ca$infection
+dataX <- as.matrix(genes)
+
+set.seed(321)
+
+#A 5-fold CV process repeated 50 times (iterations) was performed. Function GenerateLearningsets() generates learning and testing sets for each iteration.
+iterations<-50
+nfolds<-5
+
+CVdat <- GenerateLearningsets(y = Y, method = "CV", fold = nfolds, niter=iterations, strat = TRUE)
+
+#Variable selection is performed with function GeneSelection() with the LASSO method with a intermediate penalty term (norm.fraction=0.5):
+
+varsel_lasso <- GeneSelection(X = dataX, y = Y, learningsets = CVdat, method = "lasso", norm.fraction=0.5)
+
+#Classification is performed using LASSO for the first 5, 10, 15 and 20 most selected variables:
+
+class_lasso5<-classification(X = dataX, y = Y, learningsets = CVdat, classifier = LassoCMA, genesel = varsel_lasso , nbgene = 5, norm.fraction=1)
+
+class_lasso10<-classification(X = dataX, y = Y, learningsets = CVdat, classifier = LassoCMA, genesel = varsel_lasso , nbgene = 10, norm.fraction=1)
+
+class_lasso15<-classification(X = dataX, y = Y, learningsets = CVdat, classifier = LassoCMA, genesel = varsel_lasso , nbgene = 15, norm.fraction=1)
+
+class_lasso20<-classification(X = dataX, y = Y, learningsets = CVdat, classifier = LassoCMA, genesel = varsel_lasso , nbgene = 20, norm.fraction=1)
+
+result_list <- list(class_lasso5, class_lasso10, class_lasso15, class_lasso20)
+
+#Classification accuracy is compared:
+
+comparison_lasso<- compare(result_list,plot = F, measure = c("misclassification","auc"))
+print(comparison_lasso)
+
+#           misclassification   auc
+# Lasso          0.3011429 0.7456723
+# Lasso2         0.2908571 0.7672543
+# Lasso3         0.3134286 0.7465282
+# Lasso4         0.3298571 0.7196486
+
+#Based on results, the method Lasso2 with the best classification accuracy (maximum AUC=0.7672543) is the one with 10 variables. 
+#Thus, we print the 10 most selected variables in the iterative process, and this is the model proposed:
+
+ntop<-10
+
+seliter <- numeric()
+for (i in 1:iterations) seliter <- c(seliter, toplist(varsel_lasso, iter = i, top = ntop, show = FALSE)$index)
+
+selected_lasso<-sort(table(seliter), dec = TRUE)
+
+index_lasso<-as.numeric(names(selected_lasso[1:ntop]))
+
+topselection_lasso<-data.frame(colnames(dataX)[index_lasso], selected_lasso[1:ntop], 100*selected_lasso[1:ntop]/iterations)
+colnames(topselection_lasso)<-c("variable", "frequency of selection", "percentage of selection")
+topselection_lasso
+
+#The following is the list of selected variables for my fitted logistical model using LASSO:
+
+#           variable frequency of selection percentage of selection NA NA
+# 1        DIAPH3.2_s                      5                      49  5 98
+# 2            MMP9_s                     24                      42 24 84
+# 3         ALDH4A1_s                     25                      33 25 66
+# 4            GNAZ_s                     21                      32 21 64
+# 5           AYTL2_s                     48                      32 48 64
+# 6        CDC42BPA_s                     22                      28 22 56
+# 7  Contig63649_RC_s                     27                      22 27 44
+# 8             DTL_s                     40                      21 40 42
+# 9          TSPYL5_s                      3                      18  3 36
+# 10           PECI_s                     41                      18 41 36
+
+
+``` 
+
+**QUESTION 16**
+Obtain Kaplan-Meier survival curves for the time of symptoms as a function of the kind of infection and test for the significance of the difference in duration of symptoms. Discuss the results.
+```{r Q16}
+#BACKGROUND: In survival analysis the outcome of interest requires information on two variables, a time variable and an indicator variable. 
+#The indicator variables is 1 when the event of interest has occurred or 0 otherwise. This two variables are specified together with the function Surv(,) 
+#and this object is used as the outcome in the analysis.
+
+#stime: Time with symptoms (days).
+#sind: Indicator of symptoms: (1 = symptoms finished; 0 = symptoms remain)
+#hosp: Indicator of hospitalization risk event (1= hospitalization, 0 = no hospitalization) : THIS WILL BE EVALUATED ADDITIONALLY
+
+
+
+#Function survfit() applied to a survival object Surv(,)provides tables and plots of Kaplan-Meier survival curves.
+
+#Kaplan-Meier curves for the time of symptoms.
+kmcurve1<-survfit(Surv(viral34_ca$stime,viral34_ca$sind)~ 1)
+summary(kmcurve1)
+plot(kmcurve1, main="Kaplan-Meier estimate with 95% confidence bounds", xlab="time", ylab="survival function")
+
+# #Kaplan-Meier curves for the time of symptoms.
+# kmcurve2<-survfit(Surv(viral34_ca$stime,viral34_ca$hosp)~ 1)
+# summary(kmcurve2)
+# plot(kmcurve2, main="Kaplan-Meier estimate with 95% confidence bounds", xlab="time", ylab="survival function")
+# #"KM curve for hospitalization or no hospitalization
+
+#Kaplan-Meier curves for the time of symptoms for the two levels of infection 
+kmcurve3<-survfit(Surv(viral34_ca$stime,viral34_ca$sind)~viral34_ca$infection)
+summary(kmcurve3)
+plot(kmcurve3, col=2:3)
+legend("topright",col=2:3, legend=c("bacterial_infection","viral_infection"), lty=1)
+
+# #Kaplan-Meier curves for the time of symptoms for the two levels of infection (1:2)
+# kmcurve4<-survfit(Surv(viral34_ca$stime,viral34_ca$hosp)~ viral34_ca$infection)
+# summary(kmcurve4)
+# plot(kmcurve4, main="KM curve for for hospitalization or no hospitalization", col=(2:3))
+# legend("topright",col=2:3, legend=c("bacterial_Infection","viral_Infection"), lty=1)
+
+
+#Kaplan-Meier curves describe and summarize the survival times: estimation and interpretation of survivor and/or hazard functions from survival data (Kaplan-Meier 
+#estimator). The Kaplan and Meier (K-M) estimator of the survivor function is a step function with 
+#jumps at the observed event times. Based on the curves, it is apparent that the mean and median survival times
+#for viral and bacterial infection "look" similar.
+
+#The log-rank test is used to confirm if two survival curves are statistically different by testing following hypothesis:
+#The null hypothesis is H0: S1(t) =S2(t), for all t > 0
+#The alternative hypothesis is: H1: S1(t) S2(t), for some t > 0
+
+#Performing the log-rank test for equality of two survival functions according to type of infection
+#survdiff(Surv(viral34_ca$stime,viral34_ca$sind)~viral34_ca$infection)
+#Error in survdiff(Surv(viral34_ca$stime, viral34_ca$sind) ~ viral34_ca$infection):Right censored data only
+
+# #Performing the log-rank test for equality of two survival functions according to type of infection
+# survdiff(Surv(viral34_ca$stime,viral34_ca$hosp)~viral34_ca$infection)
+# #Error in survdiff(Surv(viral34_c$stime, viral34_c$hosp) ~ viral34_c$infection) : Right censored data only
+
+
+``` 
+
+**QUESTION 17**
+Perform a Cox regression model for duration symptoms as a function of the covariates (ignore gene expression levels). Discuss the results
+```{r Q17}
+#BACKGROUND: The Cox PH model is the most commonly used regression model for a survival time.
+#The Cox model specifies the hazard at time t for an individual with covariates (e.g. infection type) x1
+#coxmodel1<-coxph(Surv(viral34_ca$stime,viral34_ca$sind)~ viral34_ca$infection+viral34_ca$sind+viral34_ca$gender+viral34_ca$age+viral34_ca$ancestry)
+#coxmodel1
+
+#Running with hospitalization categorical variable:
+#coxmodel2<-coxph(Surv(viral34_ca$stime,viral34_ca$hosp)~ viral34_ca$infection+viral34_ca$sind+viral34_ca$gender+viral34_ca$age+viral34_ca$ancestry)
+#coxmodel2
+#Error in coxph(Surv(viral34_c$stime, viral34_c$hosp) ~ viral34_c$infection + : an id statement is required for multi-state models
+
+#Error in coxph(Surv(viral34_ca$stime, viral34_ca$hosp) ~ viral34_ca$infection +  : 
+#                 an id statement is required for multi-state models
+
+
+#cox<-survfit(coxmodel1)
+#cox
+#plot(cox)
+
+#Cox diagnostics
+#1. Non overlaping survival curves
+#2. log(-log(Surv) aproximately parallel lines
+
+#plot(log(-log(kmcurve3$surv)))
+
+#No strata(covariate) + logwbc was added to the original list of covariates
+# No stratified Cox model was plotted
+
+
+
+``` 
+

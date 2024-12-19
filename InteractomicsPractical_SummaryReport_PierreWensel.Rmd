@@ -1,0 +1,2819 @@
+---
+title: "Interactomics Practical"
+author: "Pierre Wensel"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    highlight: default
+    number_sections: true
+    theme: readable
+    toc: true
+    toc_depth: 2
+    toc_float: true
+  pdf_document:
+    toc: true
+    toc_depth: '2'
+---
+
+
+**Assignment: Integrative Genomics Practical**
+**Course: UVIC MS Omics Data Analysis-Interactomics**
+
+The aim of this practical is to study the impact of age in adrenocortical carcinoma (ACC).For that, an analysis needs to be performed integrating at least 2 different blocks of omics data following these steps:
+
+1. Use the miniACC data in MultiAssayExperiment Bioconductor’s package
+2. Use three omics data blocks of the following:
+Transcriptomics
+Two of the following: miRNA, protein, mutation or copy number (CN)
+3. Study the distribution of variable age (variable years_to_birth) on the common samples. 
+4. Identify the aged and young patients. You can set a threshold or use the tails of the age variable distribution, for instance. Each group must have at least 5 samples. Explain this selection and make sure that selected patients have the same tumoral samples in the omics data types selected.
+5. Study the blocks of omics data you have chosen (perform distribution plots, check categorical copy numbers or logR, etc.) and transform them and/or filter them before performing the multiomics 
+analysis. Explain all steps you perform.
+6. Apply MFA or mixOmics DIABLO to see differences between aged and young patients. Keep in mind that you will require several steps for preparing the data by matching cases in the databases, selecting necessary variables, transposing, etc. All these steps need to be clearly described.
+7. Choose a relevant graphic or two to include in the report (do not include all of them!).
+8. Drive some conclusions
+
+**SUMMARY OF RESULTS AND CONCLUSIONS**
+
+A MultiAssayExperiment object miniACC was evaluated to study the impact of age in adrenocortical carcinoma (ACC). Ten patients (5 old and 5 young) were selected from the right and left tails of a graphically-depicted normal distribution of the variable age (years_to_birth) on common samples of three individual (Ranged)SummarizedExperiments depicting mRNA-seq, miRNA-seq, and gene-based GISTIC CNV recurrent lesions. These three data blocks were then filtered, TPM-normalized, log tansformation, scaled, and individually analyzed and later correlated before being ultimately evaluated via Multi-Factor Analysis and other means.
+
+**Regarding mRNA-seq Summarized Experiment:**
+
+The ward.D2 hierarchal clustering appeared to reflect the segregation of 5 old and 5 young patients.There appeared to be a normal distribution of log2-ratios of TPM-normalized mRNA-seq count values.
+PCA analysis revealed no apparent segregation of by age status, and a total of 25.07%+ 19.65%=44.72% variance was accounted for by the first 2 principal components PC1 and PC2 and corresponding eigenvector values.A heatmap visually revealed that old patients were relatively underexpressing more mRNA genes.Based on pooled results from limma/voom/edgeR, and DESeq2 modeling, the genes that were deemed to be differentially expressed with respect to old/young age status included AKT1S1,ASNS,NRAS,MAPK9,ITGA2,ADAR,EGFR, FASN,SERPINE1,TSC2,YBX1,SHC1,TGM2,RAD50,PIK3R1, XBP1, SYK, and CDKN2A. From DESeq2 model alone, there were 3 statistically differentially overexpressed (ITGA2, TGM2, ASNS) and 2 statistically differentially underexpressed genes (CDKN2A, NRAS) identified.Based on BioMart-derived description and GO-based Gene Ontology analysis, some of these statistically differentially overexpressed protein-coding genes were associated with phago-and endo-cytosis and asparagine-glutamine metabolic processes.Chromosomes 1,5, and 7 had the most differentially expressed genes. Evidently, TGM2 is overexpressed in old patients and underexpressed in young patients
+CDKN2A is overexpressed in young patients. CDKN2A is abberantly downregulated in the Old Patient A5LC 
+
+**Regarding miRNA-seq Summarized Experiment data block:**
+
+The ward.D2 hierarchal clustering did not appear to reflect the segregation of 5 old and 5 young patients.PCA analysis revealed that with the exception of young patients A5J9 and A5JI and old patient A5LC, differences between the young and old patient samples (in dim 1 and dim2)were observed, along with a significant 28.27+18.86%=47.13% total variance being captured by the first 2 dimensions, respectively.Based on pooled modeling results from limma/voom/edgeR, and DESeq2 modeling, the miRNA genes that were deemed to be differentially expressed with respect to old/young age status included hsa-mir-153-2, hsa-mir-153-1, hsa-mir-541, hsa-mir-412, hsa-mir-3200, hsa-mir-675, hsa-mir-1248, hsa-mir-9-2, hsa-mir-9-1, hsa-mir-1229, hsa-mir-511-1,hsa-mir-507,hsa-mir-107,hsa-mir-148b, hsa-mir-542, hsa-mir-98, hsa-mir-887, and hsa-mir-9-3. Specifically, based on visual heatmap, miRNA genes hsa-mir-511-1 was overexpressed 
+in old patient A5LL, A5L5 and underexpressed in young patients A5LE and A5J9 and A5KV. On the other hand, miRNA gene hsa-mir-675 was underexpressed in young patients A5J9, A5JI, A5K0, A5JE, A5KV and overexpressed in A5LL, A5JF, and slightly in A5LC, A5L5. Based on NCBI and BioMart-derived data, hsa-mir-1229 and hsa-mir-675 are located on chromosomes 5q35.3 and 11. Gene hsa-mir-511-1 is situated on chromosome 10 at 17845107..17845193. Evidently, chromosomes x and 5 has the most (3) significantly DGE miRNA genes.Based on GO-based Gene Ontology analysis, the statistically differentially expressed miRNA genes are associated with regulation of phosphorous metabolism. The targetscan and getMIR approaches were both used to determine the mRNA gene targets of these identified miRNA genes. Of all in the DGE miRNA gene list, only 3 were successfully queried with get_multimir to identify their mRNA targets. Of all identified targets of these 3, only CDKN1A target of hsa-miR-1248 and SERBP1 target of hsa-miR-107 appear distantly related (by gene symbol similarity) to the RNA-seq DGE genes of CDKN2A and SERPINE1. Using the targetscan approach, the expression of miRNA gene 
+hsa-let-7i was found to be significantly correlated with expression of protein-coding genes CASP3 and GAB2. Unfortunately, the function-based automatic conversion of miRNA-seq Summarized Experiment to Ranged Summarized Experiment split the Summarized Experiment into Ranged and Unranged sets and not subsequently used.
+
+**Regarding GISTIC CNV Summarized Experiment:**
+
+The ward.D2 hierarchal clustering did not appear to reflect the segregation of 5 old and 5 young patients.Based on PCA analysis, there did not appear to be segregation by age status for gene-based GISTIC recurrent region state values,and a significant total of 21.26%+ 29.4 %= 50.66% variance was accounted for by the first 2 principal components PC1 and PC2 and corresponding eigenvector values. Multiple simple linear regression was performed on all gene GISTIC CNV values (dependent variables) and categorical factor age/old age.status (independent variable), and the gene that had the lowest p-value for differential GISTIC cnv value with respect to young/old age status was FOXO3.The readGistic function was explored to read in files provided manually after obtaining them via TCGAUtils or a directory containing GISTIC results and import all the relevant files. However, we were not successful at obtaining the required "all-lesions_CV.txt" file but were successful at graphically depicting GISTIC peak regions via associated plotting functions. Furthermore, the associated ACC "CNV INdividual Calls" Summarized Experiment with assays matrix was successfully downloaded via query from TCGA and added to our original miniACC MultiExperiment object, but equalization of samples and patients with the other data blocks could not be done. Therefore, the CNVRanger package and associated functions were used to further analyze our gene-wide GISTIC CNV recurrent lesions Summarized Experiment by assuming instead that the GISTIC data represented original "individual calls" that was subsequently converted to GISTIC summarized population recurrent gene-based lesion regions. A resulting CNVRanger permutation test p-value indicated a significant depletion where Out of the 197 CNV regions (cnvrs object), 33 overlapped with at least one gene.The CNVRanger findOverlaps function from the GenomicRanges package was a general function for finding overlaps between two sets of genomic regions and was used to find protein-coding genes overlapping aforementioned 33 summarized CNV regions.
+
+**Correlation between CNV and mRNA-seq Data Blocks:**
+
+Differential expression of genes in the neighborhood of CNV region of interest # 1,2,3,4,8,9,13,16,23,34,35 were visually illustrated via CNVRanger function plotEQTL. Furthermore, when correlating RAW (unfiltered, non-normalized, non-transformed) mRNA-seq and GISTIC CNV assay data, the following 12 genes were identified to be strongly correlated across all patients (young and old combined): 
+"ATM", "ACVRL1", "TSC1","GSK3A",  "KEAP1",  "XRCC1",  "NFKB1",  "NF2",    "MYH9",   "YWHAB",  "MSH2",  and "DIABLO". Furthermore, 44 and 50 genes were significantly correlated across the 5 selected old and young patients, respectively. MFA for CNV and mRNA-seq only data that had been filtered, TPM-normalized, log-transformed, scaled showed segregation between old and young patients. 
+For this MFA the first dimension revealed highest contribution from mRNA-seq gene expresion (SMAD1,SRC, PIK3R1, PRKAA1, AKT3, NFKB1,  MAPK9, AKT1, PRKCA, SQSTM1) and the second dimension revealed highest contribution from GISTIC CNV gene copy number variation (SRC,TGM2, E2F1,NCOA3, BCL2L1, PRKAA1,  YWHAB,  PREX1, CDKN1B,ERBB3) 
+ 
+**Correlation between mRNA-seq and miRNA-seq Data Blocks:**
+
+The expression of miRNA gene hsa-let-7i was found to be significantly correlated with expression of protein-coding genes CASP3 and GAB2.
+
+**MFA between mRNA-seq, miRNA-seq, and GISTIC CNV Data Blocks**
+
+The filtered, TPM-transformed, log-transformed, scaled data of all 3 data block Summarized Experiments for mRNA-seq, miRNA-seq, and GISTIC CNV were jointly evaluated via MFA. Overall, Multi-FActor Analysis (MFA) helps elucidate the underlying structure of the data by reducing its dimensionality and highlighting the relationships between variables and observations. Based on MFA summary eigenvalues, the first three dimensions of MFA capture 57.77% (24.66% (dim1)+18.85% (dim2) + 14.268 (dim3)) of total variance. Based on MFA summary group analysis, compared to GISTIC cnv recurrent lesions, the miRNA-seq and mRNA-seq variables co-contribute most and have highest significant impact to the first dimension, while GISTIC cnv contributes the most towards dimension#2 (0.9 vs. 0.009). The top genes impacting dimension#1 are (from mRNA-seq data block variable) SMAD1,SRC, PIK3R1, PRKAA1, AKT3, NFKB1, MAPK9, AKT1, PRKCA. and SQSTM1. The top genes impacting dimension#2(from GISTIC CNV gene-based recurrent lesions data block variable) are SRC, TGM2,  E2F1, NCOA3, BCL2L1, PRKAA1, YWHAB, PREX1, CDKN1B, and ERBB3. The top genes impacting dimension#3(from miRNA-seq data block variable) are hsa.mir.196a.2,hsa.mir.106b, hsa.mir.196a.1, hsa.mir.25, hsa.mir.16.2, hsa.mir.196b, hsa.mir.92a.2, and (from mRNA-seq data block)CDK1, FOXM1,and ACACB. Based on MFA analysis, there is clear separation between cnv, mRNA, and miRNA block data. Based on individuals Analysis examining how individual data points relate to each dimension, the first ten individuals show their positions in the multidimensional space.No clear segregation between young and old patient samples is apparent. Of the ten selected patient samples, A5J9 (young), A5JF(old),A5JI(young),A5K0(old),A5L5(old),A5LL(old) contribute positive coefficients towards dimension#1, while A5JE (young), A5KV(young),A5LC(old),A5LE(young) contribute negative coefficients towards dimension#1. Young Patients TCGA.OR.A5LE, A5J9, A5JE appear to be outliers. Old patients A5K0, A5LL, A5JF, and A5LC appear to be outliers, suggesting that the 10 patients selected were not appropriate for this Integrated Genomics study. The mRNA expression dimension seem  to coincide with the age.status condition more than the other 2 data blocks.Based on MFA continuous Variables analysis, which indicates the relationship between the original variables, and the extracted dimensions, the mRNA-seq data block genes strongly influence Dimension 1 compared to miRNA-seq and GISTIC CNV data block variables.mRNA-seq data block quantitative variables contributed the most towards dimension#1 compared to miRNA-seq and GISTIC CNV recurrent lesions data block variables.
+
+ 
+
+
+
+
+```{r setup, include=FALSE}
+#PACKAGE INSTALLATION AND LIBRARY LOADING 
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#install.packages("BiocManager")
+
+#multiomic classes
+#BiocManager::install("S4Vectors")
+#BiocManager::install("IRanges")
+#BiocManager::install("GenomicRanges")
+#BiocManager::install("SummarizedExperiment")
+#BiocManager::install("RaggedExperiment")
+#BiocManager::install("MultiAssayExperiment")
+
+#TCGA
+#BiocManager::install("TCGAutils")
+#BiocManager::install("curatedTCGAData")
+#BiocManager::install("TCGAbiolinks")
+#BiocManager::install("RTCGA")
+#BiocManager::install("RTCGA.methylation")
+#BiocManager::install("RTCGA.mRNA")
+
+#General purpose
+#install.packages("data.table")
+#install.packages("lattice")
+#install.packages("RCurl")
+#install.packages("XLConnect")
+#install.packages("biomaRt")
+#install.packages("tidyverse")
+
+#Visualization
+#BiocManager::install("biovizBase")
+#BiocManager::install("Gviz")
+#BiocManager::install("OmicCircos")
+#BiocManager::install("ggbio")
+
+#annotation
+#BiocManager::install("org.Hs.eg.db")
+#BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
+#BiocManager::install("Homo.sapiens")
+#BiocManager::install("TxDb.Dmelanogaster.UCSC.dm3.ensGene")
+
+#sample (experiment) data
+#BiocManager::install("airway")
+#BiocManager::install("parathyroidSE")
+
+#multi-omics methods
+#BiocManager::install("SIM")
+#BiocManager::install("RmiR.Hs.miRNA")
+#install.packages("FactoMineR")
+#BiocManager::install("mixOmics")
+
+#MOFA
+#BiocManager::install("MOFA")
+#BiocManager::install("MOFAdata") 
+#BiocManager::install("org.Hs.eg.db")
+#BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
+#BiocManager::install("Homo.sapiens")
+#BiocManager::install("TxDb.Dmelanogaster.UCSC.dm3.ensGene")
+#BiocManager::install("hugene10sttranscriptcluster.db")
+#BiocManager::install(c("SIM","iGC","RmiR.Hs.miRNA"))
+
+#Functional
+#BiocManager::install("GSEABase")
+#BiocManager::install("KEGG.db")
+#BiocManager::install("GOstats")
+#BiocManager::install("pathview")
+#BiocManager::install("enrichplot")
+#BiocManager::install("clusterProfiler")
+#BiocManager::install("msigdbr")
+
+#install.packages("ActivePathways")
+
+#Already installed from microarrays:
+#BiocManager::install("oligo")
+#BiocManager::install("hugene10sttranscriptcluster.db")
+#BiocManager::install("affy")
+#BiocManager::install("affydata")
+#BiocManager::install("limma")
+#BiocManager::install("hgu95av2.db")
+#BiocManager::install("OmicCircos")
+#install.packages("fitdistrplus")
+#BiocManager::install("multiMiR")
+#BiocManager::install("CNVRanger")
+#BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
+#BiocManager::install("regioneR")
+#BiocManager::install("BSgenome.Hsapiens.UCSC.hg38.masked")
+#BiocManager::install("maftools")
+#remotes::install_github("maese005/oncoPredict")
+#BiocManager::install("TCGAutils")
+#BiocManager::install("curatedTCGAData")
+#BiocManager::install("mirbase.db")
+#BiocManager::install("RTCGAToolbox")
+#BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
+#BiocManager::install("Homo.sapiens")
+#BiocManager::install("RmiR.Hs.miRNA")
+#BiocManager::install("hugene10sttranscriptcluster.db")
+#install.packages("DBI")
+#install.packages('RSQLite')
+#BiocManager::install("cn.mops")
+#install.packages("factoextra")
+
+#LOAD NECESSARY LIBRARIES:
+library(factoextra)
+library(RSQLite)
+library(DBI)
+library(scatterplot3d)
+library(hugene10sttranscriptcluster.db)
+library(RmiR.Hs.miRNA)
+library(RCurl)
+library(ggbio)
+library(GenomicRanges)
+library(biovizBase) # utilities for visualizing genomic data
+library(Homo.sapiens) # annotation data
+library(Gviz)
+library(GenomicRanges)
+library(BSgenome.Hsapiens.UCSC.hg19)
+library(org.Hs.eg.db)
+library(TCGAbiolinks)
+library(RTCGAToolbox)
+library(cn.mops)
+library(SummarizedExperiment)
+library(Gviz)
+library(mirbase.db)
+library(oncoPredict)
+library(maftools)
+library(BSgenome.Hsapiens.UCSC.hg38.masked)
+library(regioneR)
+library(CNVRanger)
+library(MultiAssayExperiment)
+library(S4Vectors)
+library(fitdistrplus)
+library(FactoMineR)
+library(OmicCircos)
+library(SummarizedExperiment) 
+library(UpSetR)
+library(DT)
+library(GEOquery)
+library(readr)
+library(biomaRt)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(tidyverse)
+library(ggrepel)
+library(ggfortify)  
+library(pheatmap)
+library(limma)
+library(edgeR)
+library(DESeq2)
+library(sva)
+#Annotation and Gene Length Calculation
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library(org.Hs.eg.db)
+library(GenomicFeatures)
+#library("txtdbmaker")
+#txdbmaker::makeTxDbFromUCSC()
+library(multiMiR)
+library(GOstats)
+library("AnnotationDbi")
+library(GenomicRanges)
+library(TCGAutils)
+library(RaggedExperiment)
+library(curatedTCGAData)
+```
+
+
+**EXPLORATION OF MULTIASSAY EXPERIMENT, SELECTION OF 10 YOUNG/OLD PATIENTS, EQUALIZATION OF PATIENTS/SAMPLES, AND SEPARAITON OF SUMMARIZED EXPERIMENTS**
+```{r ACC}
+#EXPLORE miniACC MultiAssayExperiment:
+data(miniACC)
+class(miniACC)
+miniACC
+
+#RNASeq2GeneNorm
+#RNA-seq count data: an ExpressionSet with 198 rows and 79 columns
+#gistict
+#Reccurent copy number lesions identified by GISTIC2: a SummarizedExperiment with 198 rows and 90 columns
+#RPPAArray
+#Reverse Phase  Protein Array: an ExpressionSet with 33 rows and 46 columns. Rows are indexed by genes, but  protein annotations are available from featureData(miniACC[["RPPAArray"]]). The source of these annotations is noted in abstract(miniACC[["RPPAArray"]])
+#Mutations
+#Somatic mutations: a matrix with 223 rows and 90 columns. 1 for any kind of non-silent mutation, zero for silent (synonymous) or no mutation.
+#miRNASeqGene
+#microRNA sequencing: an ExpressionSet with 471 rows and 80 columns. Rows not having at least 5 counts in at least 5 samples were removed.
+
+#This dataset provides five assays on 92 patients, although all five assays were not performed for every patient:
+upsetSamples(miniACC)
+#This graph depicts the overlapping patients fro all 5 assays
+
+colData(miniACC)
+#getClinicalNames(miniACC)
+
+#Subset the MultiAssayExperiment to only include the three assays RNASeq2GeneNorm, gistict, and miRNASeqGene SummarizedExperiment
+#multiassayexperiment[i = rownames, j = primary or colnames, k = assay]
+miniACC.assays<-miniACC[, , c("RNASeq2GeneNorm", "gistict", "miRNASeqGene")]
+#complete.cases() shows which patients have complete data for all assays:
+summary(complete.cases(miniACC.assays))
+
+#Subset MultiAssayExperiment to Obtain common samples
+miniACC.assays.comp<-miniACC.assays[, complete.cases(miniACC.assays), ]
+#complete.cases() shows which patients have complete data for all assays:
+summary(complete.cases(miniACC.assays.comp))
+
+colData(miniACC.assays.comp)$patientID
+
+#More simply, intersectColumns() will select complete cases and rearrange each ExperimentList element 
+#so its columns correspond exactly to rows of colData in the same order:
+#miniACC.assays.comp=intersectColumns(miniACC.assays)
+
+
+#The column names of the assays in miniACC.sub.compmatch are not the same because of assay-specific identifiers, 
+#but they have been automatically re-arranged to correspond to the same patients. In these TCGA assays,
+#the first three - delimited positions correspond to patient, i.e. the first patient is TCGA-OR-A5J1:
+colnames(miniACC.assays.comp)
+
+#intersectRows() keeps only rows that are common to each assay, and aligns them in identical order
+#miniACC.assays.comp2 <- intersectRows(miniACC.assays.comp[, , c("RNASeq2GeneNorm","gistict","miRNASeqGene")])
+rownames(miniACC.assays.comp)
+ 
+#Obtain age variable and study its frequency on the common samples. We will take variable years_to_birth
+years_to_birth  <- colData(miniACC.assays.comp)$years_to_birth 
+table(years_to_birth )
+
+# plotting integer vector
+barplot(years_to_birth, xlab = "Barplot of Patient Age",ylab = "Count", col = "white",col.axis = "darkgreen",col.lab = "darkgreen")
+
+
+hist(years_to_birth, main = "Histogram of Patient Age",xlab = "Values",col.lab = "darkgreen",col.main = "darkgreen") 
+
+#Plot the histogram and overlay the density
+hist(years_to_birth, freq = FALSE)
+lines(density(years_to_birth))
+#Then, we see that the distribution is normal and not bi-modal 
+
+#We use fitdistrplus package that provides tools for distribution fitting. 
+descdist(years_to_birth, discrete = FALSE) 
+
+#Now we attempt to fit different distributions:
+normal_dist <- fitdist(years_to_birth, "norm")
+#and inspect the fit:
+plot(normal_dist)
+
+#Now we attempt to fit different distributions:
+binomial_dist <- fitdist(years_to_birth, "binom", fix.arg=list(size=77), start=list(prob=0.3))
+#and inspect the fit:
+plot(binomial_dist) 
+#We determine that years_to_birth follows a normal distribution
+
+#The mean and SD are appropriate if the variable is somewhat symmetric. However, they can be misleading
+#if the data are skewed (non-symmetric distribution) or there are outliers.
+#The median and IQR can be used with any variable, but are typically used as an alternative to the mean 
+#and SD when the variable is skewed (not symmetric) or there are outliers since they are robust to skew and outliers.
+#“Outliers” are values that are far away from the bulk of the values.
+
+#Using the following functions to compute these statistics and study the continuous variable :
+
+is.na (years_to_birth)
+sum(is.na(years_to_birth)) # Number of missing values
+mean(years_to_birth, na.rm = T)
+sd(years_to_birth, na.rm = T)
+min(years_to_birth, na.rm = T)
+max(years_to_birth, na.rm = T)
+median(years_to_birth, na.rm = T)
+IQR(years_to_birth, na.rm = T)
+quantile(years_to_birth, probs = c(0,0.25,0.5,0.75,1))
+
+#df %>%
+#  group_by(n < 0) %>%
+#  top_n(2, abs(n)) %>%
+# ungroup()
+
+length(years_to_birth)
+
+#Extracting lowest 5 ages and highest 5 ages (low and high tails of normal distribution). Evaluating young patient ages in distribution
+sort(years_to_birth)[1:5]
+
+#We have 5 unique values to choose in this range.Therefore:
+young<-c(sort(years_to_birth)[1:5]) 
+young
+ 
+#Evaluating old patient ages in distribution
+old<-sort(years_to_birth,decreasing=F)[length(years_to_birth):(length(years_to_birth)-4)]
+old
+ 
+#Now subset multi-assay experiment to only include those corresponding patients with selected age
+combined.age<-c(young, old)
+combined.age
+
+#Subsetting according to age of young and old patients
+#multiassayexperiment[i = rownames, j = primary or colnames, k = assay]
+selected.age <- miniACC.assays.comp$years_to_birth %in% combined.age
+selected.age
+
+miniACC.assays.comp.age<-miniACC.assays.comp[, miniACC.assays.comp$years_to_birth %in% combined.age , ]
+
+#Remove NA values from vector
+#miniACC.comp.age.na<-miniACC.comp.age[, !is.na(miniACC.comp.age$years_to_birth %in% combined.age), ]
+
+#Obtain common samples
+#miniACC.sub.compmatch.age.na <- miniACC.sub.compmatch.age[, complete.cases(miniACC.sub.compmatch.age), ]
+#miniACC.sub.compmatch.age
+
+colData(miniACC.assays.comp.age)$patientID
+#head(str(miniACC.assays.comp.age))
+#Confirm dimensions and that correct indexes were used in extraction:
+experiments(miniACC.assays.comp.age)
+sampleMap(miniACC.assays.comp.age)
+metadata(miniACC.assays.comp.age)
+
+#Subset each each omics data (study object class and data type). We subset out each complete SummarizedExperiment we are interested in for separate, 
+#individual evaluation and for determining if samples are aligned
+mACC.exp3 <- miniACC.assays.comp.age[[1]] #SummarizedExperiment
+mACC.CN3 <- miniACC.assays.comp.age[[2]] #SummarizedExperiment
+mACC.mir3 <- miniACC.assays.comp.age[[3]] #SummarizedExperiment
+
+#data types
+range(assay(mACC.exp3))
+table(assay(mACC.CN3))
+range(assay(mACC.mir3))
+
+rowData(mACC.exp3)
+metadata(mACC.exp3)
+ 
+#Need to make sure that we have the same SAMPLES
+s.exp3 <- substr(colnames(mACC.exp3),1,15)
+s.CN3 <- substr(colnames(mACC.CN3),1,15)
+s.mir3 <- substr(colnames(mACC.mir3),1,15)
+
+s.common3 <- intersect(intersect(s.exp3,s.CN3),s.mir3)
+
+TCGAutils::sampleTables(miniACC.assays.comp.age)
+data(sampleTypes, package="TCGAutils")
+sampleTypes
+#Select 01=Primary Solid tumor
+
+#All samples are tumoral TP
+mACC.exp.m3 <- assay(mACC.exp3)
+mACC.exp.c3 <- mACC.exp.m3[,grep(paste(s.common3,collapse="|"),colnames(mACC.exp.m3),value = T)]
+
+mACC.CN.m3 <- assay(mACC.CN3)
+mACC.CN.c3 <- mACC.CN.m3[,grep(paste(s.common3,collapse="|"),colnames(mACC.CN.m3),value = T)]
+
+mACC.mir.m3 <- assay(mACC.mir3)
+mACC.mir.c3 <- mACC.mir.m3[,grep(paste(s.common3,collapse="|"),colnames(mACC.mir.m3),value = T)]
+
+#check order and years_to_birth variable
+cd3 <- colData(miniACC.assays.comp.age)
+
+all.equal(rownames(cd3),substr(colnames(mACC.exp.c3),1,12))
+all.equal(rownames(cd3),substr(colnames(mACC.CN.c3),1,12))
+all.equal(rownames(cd3),substr(colnames(mACC.mir.c3),1,12))
+#ALL TRUE 
+
+# GLOBAL MFA variables
+exp.l3<-nrow(mACC.exp.c3)
+cn.l3<-nrow(mACC.CN.c3)
+mir.l3<-nrow(mACC.mir.c3)
+
+#Convert integer vector into factor with 2 levels (old, young) based on condition
+colData(miniACC.assays.comp.age)$years_to_birth <- factor(ifelse(colData(miniACC.assays.comp.age)$years_to_birth>=68, "old", "young"))
+table(colData(miniACC.assays.comp.age)$years_to_birth) 
+cond2<-colData(miniACC.assays.comp.age)$years_to_birth
+cond2
+#Will later Confirm same patient ID and sample order
+
+##############################################################################################################################################
+#TO LATER IMPLEMENT THE CNVRanger function eqtl FOR CO-mRNA/CNV ANALYSIS, we require the initial INDIVIDUAL CNV CALL counts matrix and experiment that later 
+#gets processed into the GISTIC CNV GENE-BASED PEAK Experiment WHICH WE HAVE ALREADY FROM miniACC. THEREFORE, WE OBTAIN THIS INDIVIDUAL CNV CALL 
+#EXPERIMENT FROM TCGA AND ADD IT TO ORIGINAL MULTIASSAY EXPERIMENT OBJECT AS FOLLOWS:
+
+miniACC.assays.comp.age.cnvcalls<-miniACC.assays.comp.age
+
+cnv <- curatedTCGAData(diseaseCode = "ACC",assays = c("*CNV*"), version="1.1.38",dry.run = FALSE)
+test<-cnv[[1]]
+
+#The c function allows the user to concatenate an additional experiment to an existing MultiAssayExperiment. 
+#The optional sampleMap argument allows concatenating an assay whose column names do not match the row names of colData. 
+#For convenience, the mapFrom argument (mapFrom=1L) allows the user to map from a particular experiment provided that the order of the colnames is in the same. 
+#A warning will be issued to make the user aware of this assumption.mapFrom=1L,mapFrom=1L
+
+miniACC.assays.comp.age.cnvcalls<-c(miniACC.assays.comp.age.cnvcalls, newassay=cnv)
+ 
+#To annotate the genomic coordinates of the genes measured in the RNA-seq assay, we use the function symbolsToRanges from the TCGAutils package. 
+#In the cases where row annotations indicate gene symbols, the symbolsToRanges utility function converts genes to genomic ranges and replaces existing assays 
+#with RangedSummarizedExperiment objects. Gene annotations are given as 'hg19' genomic regions.
+#Name of the genome is typically the name of an NCBI assembly (e.g. GRCh38.p13, WBcel235, TAIR10.1, ARS-UCD1.2, etc...) 
+#or UCSC genome(e.g. hg38, bosTau9, galGal6, ce11, etc...)
+
+miniACC.assays.comp.age.cnvcalls.ranges <- TCGAutils::symbolsToRanges(miniACC.assays.comp.age.cnvcalls, unmapped=FALSE)
+ 
+#microRNA assays obtained from curatedTCGAData have annotated sequences that can be converted to genomic ranges using the mirbase.db package. 
+#The function looks up all sequences and converts them to ('hg19') ranges. For those rows that cannot be found, an 'unranged' assay is introduced in the resulting MultiAssayExperiment object.
+miniACC.assays.comp.age.cnvcalls.ranges  <- mirToRanges(miniACC.assays.comp.age.cnvcalls.ranges)
+ 
+#for(i in 1:4) 
+#{
+#  rr <- rowRanges(miniACC.assays.comp.age.cnvcalls.ranges[[i]])
+#  GenomeInfoDb::genome(rr) <- "hg19"
+#  GenomeInfoDb::seqlevelsStyle(rr) <- "UCSC"
+#  ind <- as.character(seqnames(rr)) %in% c("chr1","chr2","chr3", "chr4","chr5", "chr6","chr7", "chr8", "chr9","chr10","chr11", "chr12","chr13", "chr14","chr15", "chr16", "chr17", "chr18","chr19","chr20", "chr21","chr22", "chr23", "chrx")
+#  rowRanges(miniACC.assays.comp.age.cnvcalls.ranges[[i]]) <- rr
+#  miniACC.assays.comp.age.cnvcalls.ranges[[i]] <- miniACC.assays.comp.age.cnvcalls.ranges[[i]][ind,]
+#}
+#miniACC.assays.comp.age.cnvcalls.ranges
+
+#We now restrict the analysis to intersecting patients of the three assays using MultiAssayExperiment’s intersectColumns function, 
+#and select Primary Solid Tumor samples using the splitAssays function from the TCGAutils package.
+#miniACC.assays.comp.age.cnvcalls <- MultiAssayExperiment::intersectColumns(miniACC.assays.comp.age.cnvcalls)
+#miniACC.assays.comp.age.cnvcalls<-miniACC.assays.comp.age.cnvcalls[, miniACC.assays.comp.age.cnvcalls$patientID %in% 
+#c("TCGA-OR-A5J9", "TCGA-OR-A5JE", "TCGA-OR-A5JF", "TCGA-OR-A5JI", "TCGA-OR-A5K0" ,"TCGA-OR-A5KV", "TCGA-OR-A5L5", "TCGA-OR-A5LC", "TCGA-OR-A5LE","TCGA-OR-A5LL" )  , ]
+#miniACC.assays.comp.age.cnvcalls.ranges <- splitAssays(miniACC.assays.comp.age.cnvcalls.ranges, sampleCodes="01")
+#Error: 'splitAssays' is not an exported object from 'namespace:TCGAutils'
+#miniACC.assays.comp.age.cnvcalls.ranges <- splitAssays(miniACC.assays.comp.age.cnvcalls.ranges, c("01"))
+#Error in splitAssays(miniACC.assays.comp.age.cnvcalls.ranges, c("01")) : 
+#is.list(hitList) || is(hitList, "List") is not TRUE 
+
+#Extracting individual summarized experiments which will be henceforth individually analyzed:
+cnv_calls<-miniACC.assays.comp.age.cnvcalls.ranges[[1]]
+cnv_calls
+#head(assays(cnv_calls)$Num_Probes)
+#head(assays(cnv_calls)$Segment_Mean)
+ 
+mRNA_expr<-miniACC.assays.comp.age.cnvcalls.ranges[[2]]
+mRNA_expr
+ 
+cnv_gistic<-miniACC.assays.comp.age.cnvcalls.ranges[[3]]
+cnv_gistic
+ 
+miRNA_expr<-miniACC.assays.comp.age.cnvcalls.ranges[[4]]
+miRNA_expr
+
+miRNA_expr_unranged<-miniACC.assays.comp.age.cnvcalls.ranges[[5]]
+miRNA_expr_unranged
+
+#We will henceforth analyze the individual summarized experiments extracted from the MULTIASSAY EXPERIMENT miniACC.assays.comp.age 
+#(1) PRIOR TO INCLUSION of the additional summarized experiment for INDIVIDUAL CNV_CALLS because we were unsuccessful in equalizing the samples and patients 
+#across all summarized experiments including th individual calls experiment, and 
+#(2) PRIOR TO EXECUTION OF THE mirToRanges function because this unfortunately segregated the miRNA Summarized Experpiment into Ranged and Unranged Experiments
+ 
+
+```
+
+
+
+
+
+
+
+**mRNA-Seq DATA BLOCK ANALYSIS**
+```{r mRNASeq}
+
+#Preliminary analysis of individual extracted mRNA-seq Summarized Experiment:
+
+#Creating a phenotype dataframe for mRNA expression:
+phenoN <- data.frame(sample=colnames(mACC.exp.c3),patientID=colData(miniACC.assays.comp.age)$patientID, age.status=colData(miniACC.assays.comp.age)$years_to_birth)
+rownames(phenoN)<-phenoN$sample 
+
+countsM <- as.matrix(assays(mACC.exp3)$exprs)
+
+#These are identical matrixes
+#The GENE IDs appear to be HGNC. For instance, DIRAS3 is HGNC symbol for Homo sapiens (human)family GTPase 3 according to website: https://www.ncbi.nlm.nih.gov/gene/9077
+
+sum(is.na(countsM))
+
+#As part of the exploration, we plot data
+boxplot(countsM) #They didn't apply log2 on the TMM for transformation
+boxplot(log2(countsM+2))
+
+#Check Library size
+lSize <- colSums(countsM)
+lSize #all sample sums < 1M (not = 1M as expected for TMM normalization) and non-homogeneous 
+
+#We study total of reads per sample (library size).
+sampleT <- apply(countsM, 2, sum)/10^6
+range(sampleT)
+
+sampleTDF <- data.frame(sample=names(sampleT), total=sampleT)
+
+p <- ggplot(aes(x=sample, y=sampleT, fill=sampleT), data=sampleTDF) + geom_bar(stat="identity")
+p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("")
+
+#One of the characteristics of RNA-seq data is that it contains a lot of zeros, 
+#corresponding to genes that are not expressed. It is therefore important to remove genes that 
+#consistently have zero or very low counts. In this case we will only keep genes that have at 
+#least 10 reads in at least 4 samples. One recommendation for the number of samples would be set
+#to the smallest group size. Our "old" group and "young" group  have 5 samples each (10 patients, 10 samples total)
+
+keep <- rowSums(countsM > 10) >= 5 # at least 5 samples have 10 reads per gene
+countsF <- countsM[keep,]
+
+#There are several methods that can be used to normalize values in count matrices. 
+#Traditionally, CPM (Counts Per Million), RPKM (Reads Per Kilobase Million) or FPKM (Fragments Per Kilobase Million) 
+#were used to report RNA-seq results. However, TPM (Transcripts Per Kilobase Million) is now more popular. 
+#CPM divide the counts by library size whereas RPKM/FPKM and TPM scale the data using gene length and library size. 
+#When comparing samples, TMM (Trimmed Mean on the M-values) is the standard method to report results. Other methods 
+#include also the GC content in the normalization step.
+
+#Gene length
+#To normalize using RPKM, FPKM or TPM we will need the gene length. 
+#Let’s obtain this information throughout biomaRt. 
+#The Cancer Genome Atlas (TCGA) uses GENCODE 36 (GRCh38/hg38) as a reference gene model
+#The GENCODE annotation is made by merging the manual gene annotation produced by the Ensembl-Havana team and the Ensembl-genebuild automated gene annotation.
+#GENCODE version 36 corresponds to Ensembl 102 based on the website:https://genome.ucsc.edu/cgi-bin/hgTrackUi?db=hg38&g=wgEncodeGencodeSuper
+#We will take version 102 from the available archived. We will extract HGNC ID, chromosome, start and end to compute later or the gene length.
+
+listMarts()
+listEnsemblArchives() 
+#Taking version 102
+listEnsembl(version = 102)
+
+ensembl102 <- useEnsembl(biomart = 'genes', dataset = 'hsapiens_gene_ensembl',version = 102)
+
+#listDatasets(ensembl102)
+attributes = listAttributes(ensembl102)
+attributes[1:5,]
+#searchAttributes(mart = ensembl102, pattern = "hgnc_symbol")
+#searchAttributes(mart = ensembl102, pattern = "position")
+#searchAttributes(mart = ensembl102, pattern = "length")
+#searchAttributes(mart = ensembl102, pattern = "ensembl.*id")
+searchAttributes(mart = ensembl102, pattern = "entrez.*id")
+filters = listFilters(ensembl102)
+filters[1:5,] 
+searchFilters(mart = ensembl102, pattern = "hgnc_symbol")
+searchFilters(mart = ensembl102, pattern = "hgnc_symbol")
+head(searchFilters(mart = ensembl102, pattern = "ensembl.*id"))
+
+gensInfo<-getBM(attributes=c("hgnc_symbol","ensembl_gene_id","chromosome_name","start_position","end_position","entrezgene_id","hgnc_symbol","description" ), filters=c("hgnc_symbol"), values=list(rownames(countsF)), mart=ensembl102)
+gensInfo$length <- gensInfo$end_position - gensInfo$start_position
+range(gensInfo$length)
+ 
+dim(gensInfo) #notice different length of genes, there are some repetitions and some missing values
+table(duplicated(gensInfo$hgnc_symbol)) #some 
+gensInfo[duplicated(gensInfo$hgnc_symbol),]#just a miRNA
+length(setdiff(rownames(countsF), gensInfo$hgnc_symbol)) 
+ 
+countsFDF <- data.frame(ID=rownames(countsF),countsF)
+countsFInfo <- right_join(countsFDF, gensInfo, by=c("ID"="hgnc_symbol")) 
+
+countsFInfo <- countsFInfo[!duplicated(countsFInfo$ID),] #After having checked duplications, just keep first result
+
+countsFInfo_backup<-countsFInfo
+colnames(countsFInfo_backup)[colnames(countsFInfo_backup) == 'chromosome_name'] <- 'chr'
+colnames(countsFInfo_backup)[colnames(countsFInfo_backup) == 'start_position'] <- 'start'
+colnames(countsFInfo_backup)[colnames(countsFInfo_backup) == 'end_position'] <- 'end'
+
+#Chromosome names that are missing or erroneous need to be fixed:
+countsFInfo_backup[countsFInfo_backup$ID == "RPS6KA1", "chr"] <- "1"
+countsFInfo_backup[countsFInfo_backup$ID == "AKT3", "chr"] <- "1"
+countsFInfo_backup[countsFInfo_backup$ID == "CLDN7", "chr"] <- "17"
+countsFInfo_backup[countsFInfo_backup$ID == "PTEN", "chr"] <- "10"
+countsFInfo_backup[countsFInfo_backup$ID == "YWHAE", "chr"] <- "17"
+countsFInfo_backup[countsFInfo_backup$ID == "MAPT", "chr"] <- "17"
+countsFInfo_backup[countsFInfo_backup$ID == "ACACA", "chr"] <- "17"
+countsFInfo_backup[countsFInfo_backup$ID == "EEF2K", "chr"] <- "16"
+countsFInfo_backup[countsFInfo_backup$ID == "MYH11", "chr"] <- "16"
+countsFInfo_backup[countsFInfo_backup$ID == "HSPA1A", "chr"] <- "6"
+countsFInfo_backup[countsFInfo_backup$ID == "CHGA", "chr"] <- "14"
+
+countsFInfo_backup$chr<-paste0("chr", countsFInfo_backup$chr )
+
+#To perform FPKM (for paired-end reads) or RPKM (for single-end reads), we first divide by the library size and then by gene length. 
+#The sum of each sample after FPKM normalization is different.
+
+#step 1: normalize for read depth and multiply by million
+readD <- apply(countsFInfo[,2:11], 2, function(x) x / sum(x) * 10^6) 
+
+#step 2. scale by gene length and multiply by thousand
+countsFPKM <- readD / countsFInfo$length * 10^3
+colSums(countsFPKM)
+
+#To perform TPM, we first divide by the gene length and then we divide by the transformed sequencing depth. 
+#Check that the sum of each column after TPM normalization equals to 10^6.
+
+# sampleTF <- colSums(countsFInfo[,2:11]) 
+
+#step 1: divide by gene length and multiply by thousand to obtain the reads per kilobase (RPK) 
+rpk <- countsFInfo[,2:11] / countsFInfo$length * 10^3
+#step 2: divide by sequencing depth and multiply by million
+countsTPM <- apply(rpk, 2, function(x) x / sum(x) * 10^6)
+#check totals (All equal to 1 million)
+colSums(countsTPM)
+
+#PREPARING DATAFRAME FOR LATER CNV VS. mRNA-Seq CORRELATION ANALYSIS AND MFA
+
+countsF_TPM_LOG<-log2(countsTPM[,1:10]+2)
+countsF_TPM_LOG_DF<-as.data.frame(countsF_TPM_LOG)
+countsF_TPM_LOG_DF$ID<-countsFInfo_backup$ID
+countsF_TPM_LOG_DF$chr<-countsFInfo_backup$chr
+countsF_TPM_LOG_DF$start<-countsFInfo_backup$start
+countsF_TPM_LOG_DF$end<-countsFInfo_backup$end
+
+#PCA for mRNA-Seq
+countsF_TPM_LOG_DF_PCAMFA<-countsF_TPM_LOG_DF[,1:10]
+ 
+#Transpose
+countsF_TPM_LOG_DF_PCAMFA.t<-t(countsF_TPM_LOG_DF_PCAMFA)
+#Assign names, we include a exp suffix to differentiate genes from cnv
+colnames(countsF_TPM_LOG_DF_PCAMFA.t)<-paste(countsF_TPM_LOG_DF$ID,"exp",sep=".")
+#Construct data.frame to perform PCA
+expr4pca<-data.frame(cond2,countsF_TPM_LOG_DF_PCAMFA.t)
+res.pca.expr<-PCA(expr4pca,quali.sup=1)
+res.pca.expr
+plot(res.pca.expr,habillage=1)
+#We observe differences between the young and old patient samples (in dim 1 and dim2)
+ 
+ 
+
+
+#FPKM and TPM account for gene length and library size per sample but do not take into account the rest of the samples 
+#belonging to the experiment. There are situations in which some genes can accumulate high rates of reads. 
+#To correct for these imbalance in the counts composition there are methods such as the Trimmed Mean of M-values (TMM), 
+#included in the package edgeR. This normalization is suitable for comparing among the samples, for instance when performing sample 
+#aggregations.
+
+#Normalization using TMM (edgeR package)
+d <- DGEList(counts = countsF)
+Norm.Factor <- calcNormFactors(d, method = "TMM")
+countsTMM <- cpm(Norm.Factor, log = T)
+
+countsTMMnoLog <- cpm(Norm.Factor, log = F) 
+#Observing how distribution of the three normalizations (in log2) change (for the first sample).
+
+hist(log2(countsFPKM[,1]+2), xlab="log2-ratio", main="FPKM")
+#Appears to be a normal distribution of log2-ratios
+hist(log2(countsTPM[,1]+2), xlab="log2-ratio", main="TPM") 
+#Appears to be a normal distribution of log2-ratios
+
+#We will later need gene ID to be included to filtered, TPM-normalized, log-transformed mRNA=seq counts matrix 
+#For future mRNA-seq vs. GISTIC CNV correlation analysis: 
+
+hist(countsTMM[,1], xlab="log2-ratio", main="TMM") 
+#Appears to be a normal distribution of log2-ratios
+
+#To see how samples aggregate, we will perform hierarchical clustering as well as PCA. 
+#The purpose is to see whether samples aggregate by condition or there are some outliers, that might have a biological or technical causes.
+
+#Hierarchical clustering
+x_rna<-countsTMM
+
+#Euclidean distance
+clust.cor.ward <- hclust(dist(t(x_rna)),method="ward.D2")
+plot(clust.cor.ward, main="hierarchical clustering", hang=-1,cex=0.8)
+#The ward.D2 hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average <- hclust(dist(t(x_rna)),method="average")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8)
+#The average hierarchal clustering DOES NOT appear to reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average <- hclust(dist(t(x_rna)),method="complete")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8)
+#The complete hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+#Correlation based distance
+clust.cor.ward <- hclust(as.dist(1-cor(x_rna)),method="ward.D2")
+plot(clust.cor.ward, main="hierarchical clustering", hang=-1,cex=0.8)
+#The ward.D2 hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average<- hclust(as.dist(1-cor(x_rna)),method="average")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8) 
+#The average hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+#Data Preparation
+cond2<-phenoN$age.status
+countsF_backup<-as.matrix(countsF)
+sum1<-sum(is.na(countsF_backup))
+sum1
+ 
+#Density plot of raw read counts (log10)
+countsSF_backup_log <- log(countsF_backup,10) 
+d <- density(countsSF_backup_log)
+plot(d,xlim=c(1,8),main="",ylim=c(0,.45),xlab="Raw filtered read counts per gene after log10 transformation)", ylab="Density")
+for (s in 1:length(colnames(countsSF_backup_log))){
+  countsSF_backup_log <- log(countsF_backup[,s],10) 
+  d <- density(countsSF_backup_log)
+  lines(d)
+}
+
+#Box plots of raw filtered read counts after log10 transformation
+countsSF_backup_log <- log(countsF_backup,10)
+boxplot(countsSF_backup_log , main="", xlab="", ylab="Raw read counts per gene after log10 transformation)",axes=FALSE)
+axis(2)
+axis(1,at=c(1:length(colnames(countsSF_backup_log))),labels=colnames(countsSF_backup_log),las=2,cex.axis=0.8)
+
+#Plot Heatmap with condition age.status as labels
+colnames(countsF_backup)<-phenoN$age.status 
+heatmap(countsF_backup, col = topo.colors(50), margin=c(10,6))
+#Heatmap reveals that Old patients were relatively underexpressing more mRNA genes
+
+# PCA
+#library ggfortify needed for the autoplot to understand and plot PCA results
+summary(pca.filt <- prcomp(t(x_rna), scale=T )) 
+autoplot(pca.filt, data=phenoN, colour="patientID", shape="age.status")
+
+#There does not appear to be segregation by age status
+#Note that a total of 25.07%+ 19.65%=44.72% variance is accounted for by the 
+#first 2 principal components PC1 and PC2 and corresponding eigenvector values
+
+#RNA-seq are represented by counts matrices and therefore linear models like those implemented in limma 
+#cannot be directly applied. There are several options we can take:
+
+#1.Transform counts matrices and apply limma
+#2.Use specific methods that account for count data distribution
+#The voom transformation is used for the first limma approach and DESeq2 accounting 
+#for Negative Binomial distribution of the data is used in second approach.
+#The limma approach for RNA-seq converts read counts to log2-counts-per-million (logCPM) and the mean-variance relationship 
+#is modeled either with precision weights (the voom approach) or with an empirical Bayes prior trend (the limma-trend approach).
+#Voom estimates the mean-variance relationship of the log-counts and creates weights that are later on used by limma.
+#Applying the voom transformation and the limma model to perform differentially expressed genes using variable cond.
+
+ 
+cond2<-phenoN$age.status
+design <- model.matrix(~0+cond2)
+rownames(design) <- phenoN$sample
+colnames(design) <- gsub("cond2", "", colnames(design))
+
+voom.res <- voom(countsF, design, plot = T) 
+
+#Model fit
+fit <- lmFit(voom.res, design) 
+
+#contrasts
+contrast.matrix <- makeContrasts(con1=old-young,levels = design) 
+
+#contrasts fit and Bayesian adjustment
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fite <- eBayes(fit2)
+
+#summary 
+summary(decideTests(fite, method = "separate"))
+
+#In case we cannot adjust for multiple comparisons, not advisable
+summary(decideTests(fite, adjust.method = "none", method = "separate")) 
+
+#global model
+top.table <- topTable(fite, number = Inf, adjust = "fdr")
+#Now study how p-values behave. Under the null hypothesis, p-values are expected to have a uniform distribution.
+
+hist(top.table$P.Value, breaks = 100, main = "results P")
+
+#No significant results were obtained at FDR < 0.05 and the distribution of p-values 
+#shows that there is some variability that was not considered in the model. 
+#We do not later include other colData (multiassay experimental) variables  in the model to see whether results improve.
+
+#DESeq2 on SUMMARIZED EXPERIMENT:
+#As input, the DESeq2 package expects raw count data in the form of a matrix of integer values. 
+#The DESeq2 model internally corrects for library size, so transformed or normalized values such as counts 
+#scaled by library size should not be used as input. The estimates of dispersion and logarithmic fold changes incorporate data-driven prior distributions.
+#ddsSE <- DESeqDataSet(mACC.exp3, design = ~ colnames(mACC.exp3))
+#ddsSE
+#filtering
+#keep <- rowSums(counts(ddsSE) >= 10) >= 5
+#ddsSE <- ddsSE[keep,]
+
+sum_na<-sum(is.na(countsF))
+
+#DESeq2 on COUNT MATRIX:
+#Filtering is also advised by DESeq2, so we will create the DESeqDataSet from the filtered counts matrix.
+countsF_int<-countsF
+object.size(countsF_int)
+mode(countsF_int) <- "integer"
+object.size(countsF_int)
+
+dds <- DESeqDataSetFromMatrix(countData = countsF_int,colData = phenoN,design = ~ age.status) 
+#To benefit from the default settings of the package, you should put the variable of interest at 
+#the end of the formula and make sure the control level is the first level. This is not necessary if contrast option is used as here
+dds <- DESeq(dds)
+
+# Global model
+resG <- results(dds, alpha=0.05) #lfcThreshold is by default 0
+summary(resG)
+ 
+#Contrasts, we just check two of them
+res1 <- results(dds, contrast=c("age.status","old","young"))
+summary(res1)
+res1DF <- as.data.frame(res1)
+res1DFS <- res1DF[order(res1DF$pvalue),]
+res1DFSign <- res1DFS[!is.na(res1DFS$pvalue) & res1DFS$pvalue<0.05, ]
+res1DFSign
+
+#From DESeq2 model, there are 3 statistically differentially overexpressed (ITGA2, TGM2, ASNS)
+#and 2 statistically differentially underexpressed genes (CDKN2A, NRAS) identified:
+
+#Results of limma and DESeq2 can be visualized using volcano plots and heatmaps. 
+#We will just create plots for the first contrast.
+
+#Volcano plot
+
+colorS <- c("blue", "grey", "red")
+#CHECK p or p.adj
+
+#specific parameters
+showGenes <- 20 #genes to be displayed with names
+
+dataV <- topTable(fite, n = Inf, coef = "con1", adjust = "fdr")
+dataV <- dataV %>% mutate(gene = rownames(dataV), logp = -(log10(P.Value)), logadjp = -(log10(adj.P.Val)),
+                          FC = ifelse(logFC>0, 2^logFC, -(2^abs(logFC)))) %>%
+  mutate(sig = ifelse(P.Value<0.01 & logFC > 1, "UP", ifelse(P.Value<0.01 & logFC < (-1), "DN","n.s"))) #ideally we should have an adj.P.Val < 0.05
+
+p <- ggplot(data=dataV, aes(x=logFC, y=logp )) +
+  geom_point(alpha = 1, size= 1, aes(col = sig)) + 
+  scale_color_manual(values = colorS) +
+  xlab(expression("log"[2]*"FC")) + ylab(expression("-log"[10]*"(p.val)")) + labs(col=" ") + 
+  geom_vline(xintercept = 1, linetype= "dotted") + geom_vline(xintercept = -1, linetype= "dotted") + 
+  geom_hline(yintercept = -log10(0.1), linetype= "dotted")  +  theme_bw()
+
+p <- p + geom_text_repel(data = head(dataV[dataV$sig != "n.s",],showGenes), aes(label = gene)) 
+
+print(p)
+
+#Evidently, expression of gene CDKN2A is significantly downregulated and expression of gene TGM2 is upregulated
+#as a function of age (young/old)
+
+#Heatmap
+#Plotting heatmap results for the limma model (without adjusting for variable patientID).
+
+t1 <- topTable(fite, n = Inf, coef = "con1", adjust = "fdr")
+res1 <- t1[t1$P.Value<0.01 & abs(t1$logFC) > 1,]
+
+data.clus <- countsTMM[rownames(res1),]
+
+cond2.df <- as.data.frame(cond2)
+rownames(cond2.df) <- colnames(data.clus)
+pheatmap(data.clus, scale = "row", show_rownames = TRUE, annotation_col = cond2.df)
+
+#Evidently, TGM2 is overexpressed in old patients and underexpressed in young patients
+#CDKN2A is overexpressed in young patients. CDKN2A is abberantly downregulated in the Old Patient A5LC 
+
+#GENE ANNOTATION AND GENE ONTOLOGY:
+
+#Load the library
+#The central ID for org.Hs.eg.db, a genome-wide annotation for humans based on Entrez Gene, is the NCBI Gene ID.
+#org.Hs.egACCNUM is an R object that contains mappings between Entrez Gene identifiers and
+#GenBank accession numbers.
+
+#Define list of 5 genes of interest (DE genes - EntrezGene IDs)
+gene_entrez1<-countsFInfo[countsFInfo$ID == rownames(res1DFSign)[1],16]#OVER
+gene_entrez2<-countsFInfo[countsFInfo$ID == rownames(res1DFSign)[2],16]#OVER
+gene_entrez3<-countsFInfo[countsFInfo$ID == rownames(res1DFSign)[3],16]#UNDER
+gene_entrez4<-countsFInfo[countsFInfo$ID == rownames(res1DFSign)[4],16]#UNDER
+gene_entrez5<-countsFInfo[countsFInfo$ID == rownames(res1DFSign)[5],16]#OVER
+gene_entrez_total_OVER<-as.character(c(gene_entrez1,gene_entrez2,gene_entrez5))
+gene_entrez_total_OVER 
+gene_entrez_total_UNDER<-as.character(c(gene_entrez3,gene_entrez4))
+gene_entrez_total_UNDER
+
+# Define the universe as all the BioMart-obtained ENTREZ GENE IDs corresponding to our non-duplicated mRNA genes
+universeids <- as.character(countsFInfo[,16])
+length(universeids)
+
+#Before running the hypergeometric test with the hyperGTest function, we need to define the parameters
+#for the test (gene lists, ontology, test direction) as well as the annotation database to be used. 
+#The ontology to be tested can be any of the three GO domains: biological process (“BP”), cellular component (“CC”) or molecular function (“MF”).
+#We will test for over-represented biological processes in our list of differentially expressed genes.
+
+# define the p-value cut off for the hypergeometric test
+hgCutoff <- 0.05
+
+#Conducting test for overexpressed genes
+params_over <- new("GOHyperGParams",annotation="org.Hs.eg",geneIds=gene_entrez_total_OVER ,universeGeneIds=universeids,ontology="BP",pvalueCutoff=hgCutoff,testDirection="over")
+
+#Run the test
+hg_over <- hyperGTest(params_over)
+# Check results
+hg_over
+
+#Get the output table from the test for significant GO terms only by adjusting the pvalues with the p.adjust function.
+#Get the p-values of the test
+hg.pv_over <- pvalues(hg_over)
+## Adjust p-values for multiple test (FDR)
+hg.pv.fdr_over <- p.adjust(hg.pv_over,'fdr')
+## select the GO terms with adjusted p-value less than the cut off
+#sigGO.ID <- names(hg.pv.fdr[hg.pv.fdr < hgCutoff])
+#select the GO terms with NON-adjusted p-value less than the cut off
+sigGO.ID_over <- names(hg.pv_over[pvalues(hg_over) < hgCutoff])
+length(sigGO.ID_over)
+ 
+#get table from HyperG test result
+df_over <- summary(hg_over)
+# keep only significant GO terms in the table
+GOannot.table_over <- df_over[df_over[,1] %in% sigGO.ID_over,]
+head(GOannot.table_over)
+#Evidently, our statistically differentially overexpressed protein-coding genes are 
+#associated with phago-and endo-cytosis and asparagine-glutamine metabolic processes
+
+#VISUALIZATION OF mRNA-Seq Gene Expression 
+
+#SUBSET LIST OF ANNOTATED mRNA GENES THAT ARE SIGNIFICANTLY DGE BETWEEN OLD AND YOUNG PATIENTS WITH CORRESPONDING GENE POSITION COORDINATES AND CHROMOSOMES:
+
+countsFInfo_sig<-countsFInfo[countsFInfo$ID %in% rownames(res1DFSign),]
+countsFInfo_sig<-countsFInfo_sig[,c("ID", "chromosome_name", "start_position", "end_position")]
+countsFInfo_sig
+
+#ID chromosome_name start_position end_position
+#8     AKT1S1              19       49869033     49878459
+#17      ASNS               7       97851677     97872542
+#26      NRAS               1      114704469    114716771
+#51     MAPK9               5      180233143    180292099
+#55     ITGA2               5       52989340     53094779
+#59      ADAR               1      154582057    154628013
+#61      EGFR               7       55019017     55211628
+#63      FASN              17       82078338     82098294
+#66  SERPINE1               7      101127104    101139247
+#77      TSC2              16        2047967      2089491
+#80      YBX1               1       42682418     42703805
+#89      SHC1               1      154962298    154974395(154974376?) 
+#106     TGM2              20       38127385     38166578
+#122    RAD50               5      132556019    132646349
+#128   PIK3R1               5       68215756     68301821
+#131     XBP1              22       28794555     28800597
+#182      SYK               9       90801787     90898549
+#192   CDKN2A               9       21967752     21995301
+
+#Further Confirmed via NCBI Website, the combined significant DGE genes have the following chromosomal genomic positions"
+#Chromosomes 1,5,7 have multiple DGE genes
+
+#GVIZ VISUALIZATION OF mRNA-Seq Gene Expression for CDKN2A gene on chromosome 9:
+#Gviz displays information of a genomic region in a specific chromosome. It works with tracks, that need to be defined. 
+#The virtual parent class for all track items in the package is the GdObject class.  This class definition contains all the common 
+#entities that are needed for a track to be plotted.
+#There are constructor functions for each track as well as a broad range of methods to interact with and to plot them. 
+#Once the tracks defined, we can use function plotTracks() to plot them. We will introduce the basic tracks.
+mRNA_expr<-miniACC.assays.comp.age.cnvcalls.ranges[[2]]
+rowRanges(mRNA_expr)
+#Already a GRanges Object
+#mRNA_expr.gr<-unlist(rowRanges(mRNA_expr))#from a GRangesList to a GRanges object?  
+mRNA_expr.gr<-rowRanges(mRNA_expr)
+table(seqnames(mRNA_expr.gr))
+#Despite lack of Y chromosomal genes, the gender of patients confirmed as follows:
+colData(miniACC.assays.comp.age)$gender
+mRNA_expr.9<-mRNA_expr.gr[seqnames(mRNA_expr.gr)=='9',]
+mRNA_expr.9<-keepSeqlevels(mRNA_expr.9,"9") #to remove undesired levels
+exprs.9<-assays(mRNA_expr)$exprs[names(mRNA_expr.9),]
+head(exprs.9)
+
+chr2 <- "chr9"
+geno2 <- "hg19"
+atrack2 <- AnnotationTrack(mRNA_expr.9, name = "mRNA-Seq for Gene CDKN2A")
+gtrack2 <- GenomeAxisTrack() 
+itrack2 <- IdeogramTrack(gen = geno2, chromosome = chr2) 
+
+#We choose to set a from and a to in the plotTracks to delimitate the region
+dtrack2 <- DataTrack(data = t(exprs.9), start=start(mRNA_expr.9), end=end(mRNA_expr.9),chromosome = chr2, genome = geno2,name = "mRNA-Seq for Gene CDKN2A")
+plotTracks(list(gtrack2, atrack2, itrack2,dtrack2),from=20000000,to=25000000,type="heatmap", col="blue") #dot plot
+
+
+#data(geneModels) #data.frame containing 97 genes at chromosome 7 
+#head(geneModels)
+#str(geneModels)
+#grtrack <- GeneRegionTrack(geneModels, genome = genome(mRNA_expr),chromosome = as.character(unique(seqnames(mRNA_expr))),name = "Gene Model", transcriptAnnotation = "symbol", background.title = "brown")
+#head(displayPars(grtrack))
+#itrack <- IdeogramTrack(genome = "hg19", chromosome = "chr7") 
+#We choose to set a from and a to in the plotTracks to delimitate the region
+#dtrack <- DataTrack(data = t(exprs.7), start=start(mRNA_expr.7), end=end(mRNA_expr.7),chromosome = as.character(unique(seqnames(mRNA_expr))), genome = genome(mRNA_expr),name = "mRNA-Seq for Chromosome 7")
+#The sequence track adds the genomic sequences of nucleotides, when needed.
+#strack <- SequenceTrack(Hsapiens, chromosome = as.character(unique(seqnames(mRNA_expr))))
+#delimit the region
+#plotTracks(list(itrack,gtrack, atrack, grtrack,dtrack,strack), from = 26591822, to = 26591852, cex = 0.8)
+#plotTracks(list(itrack,gtrack, atrack, grtrack,dtrack), from = 26591822, to = 26591852)
+#plotTracks(list(itrack,gtrack, atrack, grtrack,dtrack), from = 26591822, to = 26591852,type = "histogram")
+#plotTracks(list(itrack,gtrack, atrack, grtrack,dtrack), from = 26591822, to = 26591852,type = "l")
+#plotTracks(list(itrack,gtrack, atrack, grtrack,dtrack), from = 26591822, to = 26591852,type = "heatmap", legend=T) 
+#plotTracks(list(itrack,gtrack, atrack, grtrack,dtrack), from = 26591822, to = 26591852,type = "boxplot") 
+
+#CIRCOS VISUALIZATION:
+
+options(stringsAsFactors = FALSE) #important argument to keep control of factors, otherwise colors are lost in OmicCircos
+seqinfo(mRNA_expr)
+range(assays(mRNA_expr)$"exprs")
+rr.df<-as.data.frame(rowRanges(mRNA_expr))
+rna<-assays(mRNA_expr)$"exprs"
+ 
+
+#filtering
+SD <-apply(rna,1,sd)
+cbind(quantiles <-quantile(SD, probs = seq(0, 1, 0.01)))
+rna.f<-rna[SD>quantiles["98%"],]
+
+rr.df.f<-rr.df[rownames(rna.f),]
+T.rr<-data.frame("chr"=rr.df.f$seqnames,"Start"=as.integer(rr.df.f$start),"End"=as.integer(rr.df.f$end),rna.f,row.names=NULL)
+par(mar=c(2, 2, 2, 2));
+plot(c(1,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+circos(R=380, cir="hg19", W=4,   type="chr", print.chr.lab=T, scale=T);
+circos(R=320, cir="hg19", W=50,  mapping=T.rr,   col.v=4,    type="heatmap2",B=FALSE, cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue");
+#checkout scale, consider transforming it
+range(rna.f) 
+
+#Perform log transformation with an offset (as log(0)->-Inf))
+T.rr<-data.frame("chr"=rr.df.f$seqnames,"Start"=as.integer(rr.df.f$start),"End"=as.integer(rr.df.f$end),log2(rna.f+1),row.names=NULL)
+par(mar=c(2, 2, 2, 2));
+plot(c(1,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+circos(R=400, cir="hg19", W=4,   type="chr", print.chr.lab=T, scale=T);
+circos(R=340, cir="hg19", W=50,  mapping=T.rr,   col.v=4,    type="heatmap2",B=FALSE, cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue");
+
+#GGBIO VISUALIZATION OF CHROMOSOME#1 GENES NRAS, ADAR,SHC1, and YBX1 mRNA-Seq GENE EXPRESSION:
+
+#Ideogram
+p.ideo <- Ideogram(genome = "hg19")
+p.ideo
+data(genesymbol, package = "biovizBase")
+genesymbol #GRanges object
+
+# select just some symbols
+wh <- genesymbol[c("NRAS","ADAR","SHC1")]
+# define the range
+wh <- range(wh, ignore.strand = TRUE)
+
+# gene model track from OrganismDb object, could also be created from 
+# TxDb object GRangesList object or EnsDb object
+p.genes <- autoplot(Homo.sapiens, which = wh)
+p.genes
+
+#plot bam files, containing alignments, extracted from the biovizBase package
+#bamfile <- system.file("extdata", "SRX21981997subADAR.bam", package="biovizBase")
+#wh <- keepSeqlevels(wh, "chr1")
+#bg <- BSgenome.Hsapiens.UCSC.hg19
+#p.mis <- autoplot(bamfile, bsgenome = bg, which = wh, stat = "mismatch") #mismatches in the alignments, by nucleotide
+#p.mis
+#tracks() to bind previously generated plots
+#gr1 <- GRanges("chr1", IRanges(114704469, 154974376))
+#tks <- tracks(p.ideo, gene = p.genes, mismatch = p.mis, heights = c(2, 10,3)) + xlim(gr1) 
+#tks
+#Another theme to plot
+#tks + theme_tracks_sunset()
+
+```
+
+
+
+
+
+
+**miRNA-Seq DATA BLOCK ANALYSIS**
+```{r miRNASeq}
+
+#Preliminary analysis of individual extracted miRNA-seq Summarized Experiment:
+
+#microRNAs (miRNAs) are short (20-24 nt) non-coding RNAs that are involved in post-transcriptional regulation of gene expression 
+#in multicellular organisms by affecting both the stability and translation of mRNAs. miRNAs are transcribed by RNA polymerase II 
+#as part of capped and polyadenylated primary transcripts (pri-miRNAs) that can be either protein-coding or non-coding. 
+#The primary transcript is cleaved by the Drosha ribonuclease III enzyme to produce an approximately 70-nt stem-loop precursor miRNA (pre-miRNA),
+#which is further cleaved by the cytoplasmic Dicer ribonuclease to generate the mature miRNA and antisense miRNA star (miRNA*) products. 
+#The mature miRNA is incorporated into a RNA-induced silencing complex (RISC), which recognizes target mRNAs through imperfect base pairing 
+#with the miRNA and most commonly results in translational inhibition or destabilization of the target mRNA. 
+#The RefSeq represents the predicted microRNA stem-loop.
+
+#Creating a phenotype dataframe for mRNA expression:
+phenoN_micro <- data.frame(sample=colnames(mACC.mir.c3),patientID=colData(miniACC.assays.comp.age)$patientID, age.status=colData(miniACC.assays.comp.age)$years_to_birth)
+rownames(phenoN_micro)<-phenoN_micro$sample 
+countsM_micro <- as.matrix(assays(mACC.mir3)$exprs)
+ 
+#The GENE IDs appear to be HGNC: Official Symbol. MIRLET7A1 provided by HGNC
+#Official Full Name microRNA let-7a-1 provided by HGNC, for example.
+#This would suggest that over 50% of genes are under microRNA regulation.
+#https://www.ncbi.nlm.nih.gov/gene/406881
+#https://www.ensembl.org/biomart/martview/bcd31ecb53c27f25ed8176ab4dfef813
+
+sum(is.na(countsM_micro))
+ 
+#As part of the exploration, we plot data
+boxplot(countsM_micro) #They didn't apply log2 on the TMM for transformation
+#Fifth and Last sample appears to have outliers
+boxplot(log2(countsM_micro+2))
+
+#Check Library size
+lSize_micro <- colSums(countsM_micro)
+lSize_micro #all sample sums > 1M (not = 1M as expected for TMM normalization) and non-homogeneous 
+
+#We study total of reads per sample (library size).
+sampleT_micro <- apply(countsM_micro, 2, sum)/10^6
+range(sampleT_micro)
+
+sampleTDF_micro <- data.frame(sample=names(sampleT_micro), total=sampleT_micro)
+
+p <- ggplot(aes(x=sample, y=sampleT_micro, fill=sampleT_micro), data=sampleTDF_micro) + geom_bar(stat="identity")
+p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("")
+#Evidently, sample 6 and 7 have relatively fewer reads and sample 8 has most reads
+ 
+#Our "old" group and "young" group  have 5 samples each (10 patients, 10 samples total)
+keep_micro <- rowSums(countsM_micro > 10) >= 5 # at least 5 samples have 10 reads per gene
+countsF_micro <- countsM_micro[keep_micro,]
+ 
+#ensembl_reg_102<-useEnsembl(biomart = 'regulation', dataset = 'hsapiens_gene_ensembl',version = 102)
+#getAnnotation(mart,featureType = c("TSS", "miRNA", "Exon", "5utr", "3utr", "ExonPlusUtr", "transcript"))
+searchFilters(mart = ensembl102, pattern = "miRBase")
+ 
+gensInfo_micro = getBM(c("mirbase_id","ensembl_gene_id","chromosome_name", "start_position","end_position", "entrezgene_id","hgnc_symbol","description"), filters=c("mirbase_id", "with_mirbase"), values=list(rownames(countsF_micro), TRUE), mart=ensembl102)
+gensInfo_micro$length <- gensInfo_micro$end_position - gensInfo_micro$start_position
+range(gensInfo_micro$length)
+ 
+#Confirms the small number of nucleotides in miRNA
+dim(gensInfo_micro) #notice different length of genes, there are some repetitions and some missing values
+table(duplicated(gensInfo_micro$mirbase_id))  
+ 
+gensInfo_micro[duplicated(gensInfo_micro$mirbase_id),]
+#12 duplicates need to be removed
+
+length(setdiff(rownames(countsF_micro), gensInfo_micro$mirbase_id)) 
+
+countsFDF_micro <- data.frame(ID=rownames(countsF_micro),countsF_micro)
+countsFInfo_micro <- right_join(countsFDF_micro, gensInfo_micro, by=c("ID"="mirbase_id")) 
+countsFInfo_micro <- countsFInfo_micro[!duplicated(countsFInfo_micro$ID),] #After having checked duplications, just keep first result
+
+#To perform FPKM (for paired-end reads) or RPKM (for single-end reads), we first divide by the library size and then by gene length. 
+#Notice that the sum of each sample after FPKM normalization is different.Assuming that for short miRNA reads, only single-end sequencing performed
+#step 1: normalize for read depth and multiply by million
+readD_micro <- apply(countsFInfo_micro[,2:11], 2, function(x) x / sum(x) * 10^6) 
+
+#step 2. scale by gene length and multiply by thousand
+countsRPKM_micro <- readD_micro / countsFInfo_micro$length * 10^3
+colSums(countsRPKM_micro)
+
+#To perform TPM, we first divide by the gene length and then we divide by the transformed sequencing depth. 
+#Check that the sum of each column after TPM normalization equals to 10^6.
+sampleTF_micro <- colSums(countsFInfo_micro[,2:11]) 
+
+#step 1: divide by gene length and multiply by thousand to obtain the reads per kilobase (RPK) 
+rpk_micro <- countsFInfo_micro[,2:11] / countsFInfo_micro$length * 10^3
+
+#step 2: divide by sequencing depth and multiply by million
+countsTPM_micro <- apply(rpk_micro, 2, function(x) x / sum(x) * 10^6)
+
+#check totals (All equal to 1 million)
+colSums(countsTPM_micro)
+
+#PREPARING DATAFRAME FOR FUTURE CNV VS. miRNA-Seq VS. mRNA-Seq CORRELATION ANALYSIS AND MFA
+countsF_TPM_LOG_micro<-log2(countsTPM_micro[,1:10]+2)
+countsF_TPM_LOG_DF_micro<-as.data.frame(countsF_TPM_LOG_micro)
+countsF_TPM_LOG_DF_micro$ID<-countsFInfo_micro$ID
+countsF_TPM_LOG_DF_micro$chr<-countsFInfo_micro$chromosome_name
+countsF_TPM_LOG_DF_micro$start<-countsFInfo_micro$start_position
+countsF_TPM_LOG_DF_micro$end<-countsFInfo_micro$end_position
+#PCA for miRNA-Seq
+countsF_TPM_LOG_DF_micro_PCAMFA<-countsF_TPM_LOG_DF_micro[,1:10]
+#Transpose
+countsF_TPM_LOG_DF_micro_PCAMFA.t<-t(countsF_TPM_LOG_DF_micro_PCAMFA)
+# assign names, we include a micexp suffix to differentiate genes from cnv or exp
+colnames(countsF_TPM_LOG_DF_micro_PCAMFA.t)<-paste(countsF_TPM_LOG_DF_micro$ID,"micexp",sep=".")
+#Construct data.frame to perform PCA
+miexpr4pca<-data.frame(cond2,countsF_TPM_LOG_DF_micro_PCAMFA.t)
+res.pca.miexpr<-PCA(miexpr4pca,quali.sup=1)
+res.pca.miexpr
+plot(res.pca.miexpr,habillage=1)
+#With the exception of young patients A5J9 and A5JI and old patient A5LC, we observe differences between the young and old patient samples (in dim 1 and dim2)
+#and 28.27+18.86%=47.13%total variance is captured by the first 2 dimensions, respectively.
+ 
+
+#Normalization using TMM (edgeR package)
+d_micro <- DGEList(counts = countsF_micro)
+Norm.Factor_micro <- calcNormFactors(d_micro, method = "TMM")
+countsTMM_micro <- cpm(Norm.Factor_micro, log = T)
+
+countsTMMnoLog_micro <- cpm(Norm.Factor_micro, log = F) 
+#See how distribution of the three normalizations (in log2) change (for the first sample).
+
+hist(log2(countsRPKM_micro[,1]+2), xlab="log2-ratio", main="RPKM_micro")
+#Appears to be a normal distribution of log2-ratios
+hist(log2(countsTPM_micro[,1]+2), xlab="log2-ratio", main="TPM_micro") 
+#Appears to be a normal distribution of log2-ratios
+hist(countsTMM_micro[,1], xlab="log2-ratio", main="TMM_micro") 
+#Appears to be a normal distribution of log2-ratios
+
+#Sample aggregation
+#To see how samples aggregate, we will perform hierarchical clustering as well as PCA. 
+#The purpose is to see whether samples aggregate by condition or there are some outliers, that might have a biological or technical causes.
+
+#Hierarchical clustering
+x_micro<-countsTMM_micro
+
+#Euclidean distance
+clust.cor.ward_micro <- hclust(dist(t(x_micro)),method="ward.D2")
+plot(clust.cor.ward_micro, main="hierarchical clustering", hang=-1,cex=0.8)
+#WITH EXCEPTION OF PATIENT TCGA-OR-A5LC, The ward.D2 hierarchal clustering appears to partially reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average_micro <- hclust(dist(t(x_micro)),method="average")
+plot(clust.cor.average_micro, main="hierarchical clustering", hang=-1,cex=0.8)
+#The average hierarchal clustering appears to partially reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average_micro <- hclust(dist(t(x_micro)),method="complete")
+plot(clust.cor.average_micro, main="hierarchical clustering", hang=-1,cex=0.8)
+#The complete hierarchal clustering appears to partially reflect the segregation of 5 old and 5 young patients
+
+#Correlation-based distance
+clust.cor.ward_micro <- hclust(as.dist(1-cor(x_micro)),method="ward.D2")
+plot(clust.cor.ward_micro, main="hierarchical clustering", hang=-1,cex=0.8)
+#The ward.D2 hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average_micro<- hclust(as.dist(1-cor(x_micro)),method="average")
+plot(clust.cor.average_micro, main="hierarchical clustering", hang=-1,cex=0.8) 
+#The average hierarchal clustering does not appear to reflect the segregation of 5 old and 5 young patients
+
+cond2<-phenoN_micro$age.status
+countsF_micro_backup<-as.matrix(countsF_micro)
+sum1<-sum(is.na(countsF_micro_backup))
+sum1
+#[1] 0
+
+
+#Density plot of raw read counts (log10)
+countsSF_micro_backup_log <- log(countsF_micro_backup,10) 
+d <- density(countsSF_micro_backup_log)
+plot(d,xlim=c(1,8),main="",ylim=c(0,.45),xlab="Raw filtered read counts per gene (log10 transformation)", ylab="Density")
+for (s in 1:length(colnames(countsSF_micro_backup_log))){
+  countsSF_micro_backup_log <- log(countsF_micro_backup[,s],10) 
+  d <- density(countsSF_micro_backup_log)
+  lines(d)
+}
+
+#Box plots of raw filtered read counts after log10 transformation
+countsSF_micro_backup_log <- log(countsF_micro_backup,10)
+boxplot(countsSF_micro_backup_log , main="", xlab="", ylab="Raw read counts per gene (log10)",axes=FALSE)
+axis(2)
+axis(1,at=c(1:length(colnames(countsSF_micro_backup_log))),labels=colnames(countsSF_micro_backup_log),las=2,cex.axis=0.8)
+ 
+#Heatmap with condition age.status as labels
+colnames(countsF_micro_backup)<-phenoN_micro$age.status 
+#Plot heatmap
+heatmap(countsF_micro_backup, col = topo.colors(50), margin=c(10,6))
+#Evidently one young patient is overexpressing many miRNA genes
+
+#PCA
+#Transpose the data to have variables (genes) as columns
+data_for_PCA2 <- t(countsF_micro_backup)
+ 
+#The cmdscale function will calculate a matrix of dissimilarities from the transposed data 
+#and will also provide information about the proportion of explained variance by calculating Eigen values.
+## calculate MDS (matrix of dissimilarities)
+mds2 <- cmdscale(dist(data_for_PCA2), k=3, eig=TRUE)  
+
+mds2$eig
+#Plotting this variable as a percentage will help determine how many components can explain the variability
+#in your dataset and thus how many dimensions you should be looking at.
+
+#Transform the Eigen values into percentage
+eig_pc2 <- mds2$eig * 100 / sum(mds2$eig)
+#Plot the PCA
+barplot(eig_pc2,las=1,xlab="Dimensions", ylab="Proportion of explained variance (%)", y.axis=NULL,col="darkgrey")
+ 
+#In most cases, the first 2 components explain more than half the variability in the dataset and can be used for plotting. 
+#The cmdscale function run with default parameters will perform a principal components analysis on the given data matrix and 
+#the plot function will provide scatter plots for individuals representation.
+ 
+#Calculate MDS
+mds2 <- cmdscale(dist(data_for_PCA2)) # Performs MDS analysis 
+#Samples representation
+ 
+plot(mds2[,1], -mds2[,2], type="n", xlab="Dimension 1", ylab="Dimension 2", main="")
+text(mds2[,1], -mds2[,2], rownames(mds2), cex=0.8) 
+ 
+#library ggfortify needed for the autoplot to understand and plot PCA results
+summary(pca.filt_micro <- prcomp(t(x_micro), scale=T )) 
+autoplot(pca.filt_micro, data=phenoN_micro, colour="patientID", shape="age.status")
+
+#There does not appear to be segregation by age status
+#Note that a total of 26.75%+ 22.59%=49.24% variance is accounted for by the 
+#first 2 principal components PC1 and PC2 and corresponding eigenvector values
+
+#LIMMA-BASED Differentially Expressed miRNA genes analysis
+cond2<-phenoN_micro$age.status
+phenoN_micro[colnames(countsF_micro),]$age.status== cond2
+
+#Create design matrix for limma
+design2 <- model.matrix(~0+cond2)
+# substitute "cond2" from the design column names
+colnames(design2)<- gsub("cond2","",colnames(design2))
+# check design matrix
+design2
+
+#calculate normalization factors between libraries
+nf2 <- calcNormFactors(countsF_micro)
+
+# normalize the read counts with 'voom' function
+y2 <- voom(countsF_micro,design2,lib.size=colSums(countsF_micro)*nf2)
+#Extract the Normalized read counts
+counts.voom2 <- y2$E
+
+#Fit linear model for each gene given a series of libraries
+fit2 <- lmFit(y2,design2)
+# construct the contrast matrix corresponding to specified contrasts of a set of parameters
+cont.matrix2 <- makeContrasts(old-young,levels=design2)
+cont.matrix2 
+
+# compute estimated coefficients and standard errors for a given set of contrasts
+fit2 <- contrasts.fit(fit2, cont.matrix2)
+
+# compute moderated t-statistics of differential expression by empirical Bayes moderation of the standard errors
+fit2 <- eBayes(fit2)
+options(digits=3)
+
+# check the output fit
+dim(fit2)
+
+#Set adjusted pvalue threshold and log fold change threshold
+mypval=0.01
+myfc=3
+
+#Get the coefficient name for the comparison  of interest
+colnames(fit2$coefficients)
+mycoef="old - young"
+# Get the output table for the 10 most significant DE genes for this comparison
+topTable(fit2,coef=mycoef)
+
+#Get the full table ("n = number of genes in the fit")
+limma.res <- topTable(fit2,coef=mycoef,n=dim(fit2)[1])
+
+#Get significant DE genes only (adjusted p-value < mypval). 
+#The adjusted p-value was increased to obtain a list of genes
+limma.res.pval <- topTable(fit2,coef=mycoef,n=dim(fit2)[1],p.val=0.57)
+dim(limma.res.pval)
+ 
+#Get significant DE genes with low adjusted p-value high fold change
+limma.res.pval.FC <- limma.res.pval[which(abs(limma.res.pval$logFC)>myfc),]
+dim(limma.res.pval.FC)
+limma.res.pval.FC
+
+#Standard edgeR differential expression analysis
+design <- model.matrix(~ cond2)
+
+# Using trended dispersions
+dge <- DGEList(counts = countsF_micro)
+dge <- calcNormFactors(dge)
+dge$samples$age.status <- cond2
+dge <- estimateGLMCommonDisp(dge, design)
+dge <- estimateGLMTrendedDisp(dge, design)
+dge <- estimateGLMTagwiseDisp(dge, design)
+
+# Fit GLM model for strain effect
+fit <- glmFit(dge, design)
+lrt <- glmLRT(fit)
+
+#Table of unadjusted p-values (PValue) and FDR values
+p_val_DE_edgeR <- topTags(lrt, adjust.method = 'BH', n = Inf)
+
+# Getting top differentially expressed miRNA's
+top_miRNAs <- rownames(p_val_DE_edgeR$table)[1:10]
+top_miRNAs
+ 
+#DESeq2 DIFFERENTAILLY EXPRESSED GENE ANALYSIS
+
+sum_na<-sum(is.na(countsF_micro))
+#DESeq2 on COUNT MATRIX:
+#Filtering is also advised by DESeq2, so we will create the DESeqDataSet from the filtered counts matrix.
+countsF_int_micro<-countsF_micro
+object.size(countsF_int_micro)
+mode(countsF_int_micro) <- "integer"
+object.size(countsF_int_micro)
+
+dds_micro <- DESeqDataSetFromMatrix(countData = countsF_int_micro,colData = phenoN_micro,design = ~ age.status) 
+#To benefit from the default settings of the package, you should put the variable of interest at 
+#the end of the formula and make sure the control level is the first level. This is not necessary if contrast option is used as here
+dds_micro <- DESeq(dds_micro)
+
+# Global model
+resG_micro <- results(dds_micro, alpha=0.05) #lfcThreshold is by default 0
+summary(resG_micro)
+
+#Contrasts, we just check two of them
+res1_micro <- results(dds_micro, contrast=c("age.status","old","young"))
+summary(res1_micro)
+
+res1DF_micro <- as.data.frame(res1_micro)
+res1DFS_micro <- res1DF_micro[order(res1DF_micro$pvalue),]
+res1DFSign_micro <- res1DFS_micro[!is.na(res1DFS_micro$pvalue) & res1DFS_micro$pvalue<0.05, ]
+res1DFSign_micro
+
+#Volcano plot
+
+colorS <- c("blue", "grey", "red")
+#CHECK p or p.adj
+
+#specific parameters
+showGenes <- 20 #genes to be displayed with names
+
+dataV <- topTable(fit2, n = Inf, coef = mycoef, adjust = "fdr")
+dataV <- dataV %>% mutate(gene = rownames(dataV), logp = -(log10(P.Value)), logadjp = -(log10(adj.P.Val)),
+                          FC = ifelse(logFC>0, 2^logFC, -(2^abs(logFC)))) %>%
+  mutate(sig = ifelse(P.Value<0.01 & logFC > 1, "UP", ifelse(P.Value<0.01 & logFC < (-1), "DN","n.s"))) #ideally we should have an adj.P.Val < 0.05
+
+p <- ggplot(data=dataV, aes(x=logFC, y=logp )) +
+  geom_point(alpha = 1, size= 1, aes(col = sig)) + 
+  scale_color_manual(values = colorS) +
+  xlab(expression("log"[2]*"FC")) + ylab(expression("-log"[10]*"(p.val)")) + labs(col=" ") + 
+  geom_vline(xintercept = 1, linetype= "dotted") + geom_vline(xintercept = -1, linetype= "dotted") + 
+  geom_hline(yintercept = -log10(0.1), linetype= "dotted")  +  theme_bw()
+
+p <- p + geom_text_repel(data = head(dataV[dataV$sig != "n.s",],showGenes), aes(label = gene)) 
+
+print(p)
+
+#Evidently, based on first limma-based DEG model, expression of gene hsa-mir-511-1 and hsa-mir-675 are significantly upregulated 
+#as a function of age status factor (levels young/old)
+
+#Heatmap
+#Plotting heatmap results for the limma model (without adjusting for variable patientID).
+
+t1 <- topTable(fit2, n = Inf, coef = mycoef, adjust = "fdr")
+res1 <- t1[t1$P.Value<0.01 & abs(t1$logFC) > 1,]
+
+data.clus <- countsTMM_micro[rownames(res1),]
+
+cond2.df <- as.data.frame(cond2)
+rownames(cond2.df) <- colnames(data.clus)
+pheatmap(data.clus, scale = "row", show_rownames = TRUE, annotation_col = cond2.df)
+
+#Evidently,  miRNA genes hsa-mir-511-1 is overepxressed in old patient A5LL, A5L5 and underexpressed in young patients
+#A5LE and A5J9 and A5KV. 
+#On the other hand, miRNA gene hsa-mir-675 is underexpressed in young patients A5J9, A5JI, A5K0, A5JE,
+#A5KV and overexpressed in A5LL, A5JF, and slightly in A5LC, A5L5.
+
+#GENE ANNOTATION AND GENE ONTOLOGY FOR DIFFERENTIALLY OVEREXPRESSED miRNA GENES
+#Load the library
+#The central ID for org.Hs.eg.db, a genome-wide annotation for humans based on Entrez Gene, is the NCBI Gene ID.
+#org.Hs.egACCNUM is an R object that contains mappings between Entrez Gene identifiers and
+#GenBank accession numbers.
+
+# Define list of genes of interest (DE genes - EntrezGene IDs)
+mirbase_ids <- as.character(rownames(limma.res.pval.FC))
+length(mirbase_ids)
+
+#We explore gene ontology for 2 select, significantly diiferentially expressed or high logfold changed miRNA genes
+#and convert and obtain ENTREZ gene IDs for GoSTATS
+genes_mirbase <- c(mirbase_ids[1], rownames(dataV)[11])
+ 
+genes_ensembl1<-countsFInfo_micro[countsFInfo_micro$ID == genes_mirbase[1],12]
+genes_ensembl2<-countsFInfo_micro[countsFInfo_micro$ID == genes_mirbase[2],12]
+#genes_ensembl3<-countsFInfo_micro[countsFInfo_micro$ID == "hsa-mir-511-1",12]
+genes_ensembl<-c(genes_ensembl1,genes_ensembl2)
+genes_ensembl
+mapIds(org.Hs.eg.db,keys = genes_ensembl,column = 'ENTREZID',keytype = 'ENSEMBL')
+select(org.Hs.eg.db,keys = genes_ensembl,column = c('SYMBOL', 'ENTREZID', 'ENSEMBL'),keytype = 'ENSEMBL')
+genes_entrez<-c("619552","100033819")
+
+#Define the universe as all the BioMart-obtained ENTREZ GENE IDs corresponding to our non-duplicated miRNA genes
+universeids <- as.character(countsFInfo_micro[,16])
+length(universeids)
+ 
+#Before running the hypergeometric test with the hyperGTest function, we need to define the parameters
+#for the test (gene lists, ontology, test direction) as well as the annotation database to be used. 
+#The ontology to be tested can be any of the three GO domains: biological process (“BP”), cellular component (“CC”) or molecular function (“MF”).
+#We will test for over-represented biological processes in our list of differentially expressed genes.
+
+# define the p-value cut off for the hypergeometric test
+hgCutoff <- 0.05
+
+params <- new("GOHyperGParams",annotation="org.Hs.eg",geneIds=genes_entrez,universeGeneIds=universeids,ontology="BP",pvalueCutoff=hgCutoff,testDirection="over")
+
+#Run the test
+hg <- hyperGTest(params)
+#Check results
+hg
+
+#We can get the output table from the test for significant GO terms only by adjusting the pvalues with the p.adjust function.
+
+#Get the p-values of the test
+hg.pv <- pvalues(hg)
+#Adjust p-values for multiple test (FDR)
+hg.pv.fdr <- p.adjust(hg.pv,'fdr')
+#select the GO terms with adjusted p-value less than the cut off
+#sigGO.ID <- names(hg.pv.fdr[hg.pv.fdr < hgCutoff])
+#select the GO terms with NON-adjusted p-value less than the cut off
+sigGO.ID <- names(hg.pv[pvalues(hg) < hgCutoff])
+length(sigGO.ID)
+ 
+#Get table from HyperG test result
+df <- summary(hg)
+#Keep only significant GO terms in the table
+GOannot.table <- df[df[,1] %in% sigGO.ID,]
+head(GOannot.table)
+
+#Evidently, our statistically differentially expressed miRNA genes are associated with regualtion of phosphorous metabolism
+
+#The R package multiMiR, with web server at http://multimir.org, is a comprehensive collection of predicted and validated miRNA-target 
+#interactions and their associations with diseases and drugs.
+#To retrieve validated miRNA -target gene interaction yielded ~11 000 target genes suggesting that over 50% of human genes are under microRNA regulation.
+
+vers_table <- multimir_dbInfoVersions()
+vers_table
+curr_vers  <- vers_table[1, "VERSION"]  # current version
+multimir_switchDBVersion(db_version = curr_vers)
+
+#Now using database version: 2.3.0
+#The function multimir_dbInfo() will display information about the external miRNA and miRNA-target databases in multiMiR, 
+#including version, release date, link to download the data, and the corresponding table in multiMiR.
+db.info = multimir_dbInfo()
+db.info
+
+#Among the 14 external databases, eight contain predicted miRNA-target interactions (DIANA-microT-CDS, ElMMo, MicroCosm, miRanda, miRDB, PicTar, PITA, and TargetScan),
+#three have experimentally validated miRNA-target interactions (miRecords, miRTarBase, and TarBase) and the remaining three contain miRNA-drug/disease associations
+#(miR2Disease, Pharmaco-miR, and PhenomiR). To check these categories and databases from within R, we have a set of four helper functions:
+predicted_tables()
+validated_tables()
+
+#get_multimir() is the main function in the package to retrieve predicted and validated miRNA-target 
+#interactions and their disease and drug associations from the multiMiR database.
+
+#Plug miRNA's into multiMiR and getting validated targets
+#multimir_target_results <- get_multimir(org = 'mmu', mirna  = "hsa-mir-382", table   = 'predicted', summary = TRUE)
+
+#Retrieving all gene targets of miRNA gene hsa-miR-107 and miRNA genes previously determined to be 
+#statistically significantly differentially expressed by age.status in our dataframe and list from combining limma+DESeq2+EDGER approaches:
+
+#"hsa-mir-153-2" "hsa-mir-153-1" "hsa-mir-541"   "hsa-mir-412"   "hsa-mir-3200"  
+#"hsa-mir-675"   "hsa-mir-1248"  "hsa-mir-9-2"   "hsa-mir-9-1"   "hsa-mir-1229" , "hsa-mir-511-1","hsa-mir-507","hsa-mir-107"
+#hsa-mir-148b   hsa-mir-542  hsa-mir-98 hsa-mir-887 hsa-mir-9-3
+
+example1 <- get_multimir(mirna  = countsFInfo_micro[18,1]  , summary = TRUE)
+head(example1@data)
+
+#rownames(limma.res.pval.FC)="hsa-mir-507"
+example2 <- get_multimir(mirna  = "hsa-mir-507"  , summary = TRUE)
+head(example2@data)
+
+example3 <- get_multimir(mirna  = "hsa-mir-1248", summary = TRUE)
+head(example3@data)
+
+#Of all in the DGE miRNA gene list, only 3 were successfully queried with get_multimir to identify their mRNA targets
+#Of all identified targets of these 3, only CDKN1A target of hsa-miR-1248 and SERBP1 target of hsa-miR-107 appear distantly related (by gene symbol similarity) 
+#to the RNA-seq DGE genes of CDKN2A and SERPINE1. We will therefore plot these miRNA expression levels
+
+#Using alternative approach, we additionally obtain the targets from `r Biocpkg("RmiR.Hs.miRNA")` using the connection to TargetScan, 
+#and the function miRNAGenes we will use later on to obtain the target for each differentially miRNA obtained.
+#We will obtain the targets from RmiR.Hs.miRNA using the connection to TargetScan in function miRNAGenes. 
+#In addition, this function will use biomaRt to retrieve the HGNC symbols. 
+#This is the function we will use later on to obtain the target for each differentially miRNA obtained and for miRNA vs. mRNA correlation analysis.
+
+#miRNA database and biomaRt connections 
+dbListTables(RmiR.Hs.miRNA_dbconn())
+ 
+#An example connecting to tarbase
+#dbGetQuery(RmiR.Hs.miRNA_dbconn(),"SELECT * FROM tarbase WHERE mature_miRNA='hsa-miR-21'")
+#ensembl=useMart("ensembl",dataset="hsapiens_gene_ensembl")
+
+ensembl3 <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl") #using useEnsembl instead of useMart
+
+miRNAGenes<-function(miRNA){
+  # OLD VERSIONS: Function to obtain gene targets from all databases given a miRNA
+  # query.targetscan <- "SELECT * FROM targetscan WHERE mature_miRNA=?"
+  targetscan <- dbReadTable(RmiR.Hs.miRNA_dbconn(), "targetscan")[,1:2]
+  class(targetscan)#dataframe
+  gens<-array(NA)
+  gens.sel.symbol<- ""
+  # OLD VERSIONS
+  # g.targetscan <- dbGetPreparedQuery(RmiR.Hs.miRNA_dbconn(), query.targetscan,bind.data=as.data.frame(miRNA))$gene_id
+  #Warning message:RSQLite::dbGetPreparedQuery() is deprecated, please switch to DBI::dbGetQuery(params = bind.data). 
+  #g.targetscan <- DBI::dbGetQuery(RmiR.Hs.miRNA_dbconn(), query.targetscan, bind.data=as.data.frame(miRNA))$miRNA
+  g.targetscan <- targetscan[targetscan$mature_miRNA ==miRNA,"gene_id" ]
+  if (length(g.targetscan)>0) {
+    gens.sel.symbol<-getBM(attributes="hgnc_symbol",filters="entrezgene_id",values=g.targetscan,mart=ensembl3)$hgnc_symbol
+  }
+  return(gens.sel.symbol)
+}
+
+
+#TESTED THIS FUNCTION ON SEVERAL SETS OF SIGNIFICANT DGE miRNA genes:
+#miRNAs_test<-rownames(limma.res.pval.FC)
+#miRNAs_test<-rownames(assay(mACC.mir3))
+miRNAs_test<-c("hsa-miR-107" )
+for (i in miRNAs_test){
+  miRNA.genes_test<-miRNAGenes(i) 
+  
+}
+
+miRNA.genes_test
+
+#VISUALIZATION OF miRNA-Seq BLOCK DATA
+
+#SUBSET LIST OF ANNOTATED miRNA GENES THAT ARE SIGNIFICANTLY DGE BETWEEN OLD AND YOUNG PATIENTS WITH CORRESPONDING GENE POSITION COORDINATES AND CHROMOSOMES:
+countsFInfo_micro_sig<-countsFInfo_micro[countsFInfo_micro$ID %in% c("hsa-mir-153-2", "hsa-mir-153-1", "hsa-mir-541","hsa-mir-412","hsa-mir-3200", "hsa-mir-675","hsa-mir-1248", "hsa-mir-9-2","hsa-mir-9-1","hsa-mir-1229", "hsa-mir-511-1","hsa-mir-507","hsa-mir-107",
+                                                                          "hsa-mir-148b", "hsa-mir-542", "hsa-mir-98", "hsa-mir-887", "hsa-mir-9-3"),]
+countsFInfo_micro_sig<-countsFInfo_micro_sig[,c("ID", "chromosome_name", "start_position", "end_position")]
+countsFInfo_micro_sig
+
+#Based on NCBI, hsa-mir-1229 and hsa-mir-675 are located on chromosomes 5q35.3 and 11
+#Gene hsa-mir-511-1 is situated on chromosome 10 at 17845107..17845193
+#Evidently, chromosomes #x and 5 has the most (3) significantly DGE miRNA genes
+
+miRNA_expr<-miniACC.assays.comp.age.cnvcalls.ranges[[4]]
+
+#Already a GRanges Object (No need to unlist)
+miRNA_expr.gr<-rowRanges(miRNA_expr)
+ 
+#GVIZ VISUALIZATION OF mRNA-Seq Gene Expression for hsa-mir-107 gene on chromosome 10:
+miRNA_expr.10<-miRNA_expr.gr[seqnames(miRNA_expr.gr)=='10',]
+miRNA_expr.10<-keepSeqlevels(miRNA_expr.10,"10") #to remove undesired levels
+exprs.10<-assays(miRNA_expr)$exprs[names(miRNA_expr.10),]
+head(exprs.10)
+chr <- "chr10"
+geno <- "hg19"
+atrack <- AnnotationTrack(miRNA_expr.10, name = "miRNA-Seq for Gene hsa-mir-107")
+gtrack <- GenomeAxisTrack() 
+itrack <- IdeogramTrack(gen = geno, chromosome = chr) 
+
+#We choose to set a from and a to in the plotTracks to delimitate the region
+dtrack <- DataTrack(data = t(exprs.10), start=start(miRNA_expr.10), end=end(miRNA_expr.10),chromosome = chr, genome = geno,name = "miRNA-Seq for Gene hsa-mir-107")
+plotTracks(list(gtrack, atrack, itrack,dtrack),from=89590000 ,to=89600000,type="heatmap", col="blue") #dot plot
+
+#CIRCOS VISUALIZATION:
+options(stringsAsFactors = FALSE)  
+rr.df_micro<-as.data.frame(rowRanges(miRNA_expr))
+rna_micro<-assays(miRNA_expr)$"exprs"
+ 
+
+#Filtering
+SD_micro <-apply(rna_micro,1,sd)
+cbind(quantiles <-quantile(SD_micro, probs = seq(0, 1, 0.01)))
+rna.f_micro<-rna_micro[SD_micro>quantiles["98%"],]
+rr.df.f_micro<-rr.df_micro[rownames(rna.f_micro),]
+T.rr_micro<-data.frame("chr"=rr.df.f_micro$seqnames,"Start"=as.integer(rr.df.f_micro$start),"End"=as.integer(rr.df.f_micro$end),rna.f_micro,row.names=NULL)
+par(mar=c(2, 2, 2, 2));
+
+
+plot(c(1,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+circos(R=380, cir="hg19", W=4,   type="chr", print.chr.lab=T, scale=T);
+circos(R=320, cir="hg19", W=50,  mapping=T.rr_micro,   col.v=4,    type="heatmap2",B=FALSE, cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue");
+#checkout scale, consider transforming it
+
+range(rna.f_micro) #[1]   2476 206162
+
+#Perform log transformation with an offset (as log(0)->-Inf))
+T.rr_micro<-data.frame("chr"=rr.df.f_micro$seqnames,"Start"=as.integer(rr.df.f_micro$start),"End"=as.integer(rr.df.f_micro$end),log2(rna.f_micro+1),row.names=NULL)
+par(mar=c(2, 2, 2, 2));
+plot(c(1,800), c(1,800), type="n", axes=F, xlab="", ylab="", main="");
+circos(R=400, cir="hg19", W=4,   type="chr", print.chr.lab=T, scale=T);
+circos(R=340, cir="hg19", W=50,  mapping=T.rr_micro,   col.v=4,    type="heatmap2",B=FALSE, cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue");
+
+```
+
+
+
+
+
+
+**GISTIC CNV DATA BLOCK ANALYSIS**
+```{r cnv}
+#Preliminary analysis of individual extracted CNV Summarized Experiment:
+
+#The following text summary is cited from the following url: 
+#https://bioconductor.org/packages/devel/bioc/vignettes/CNVRanger/inst/doc/CNVRanger.html  
+#Title: Summarization and quantitative trait analysis of CNV ranges
+#Author: Vinicius Henrique da Silva1 and Ludwig Geistlinger:  
+  
+#Copy number variation (CNV) is a frequently observed deviation from the diploid state due to duplication or deletion of genomic regions. 
+#Copy Number Variation (CNV's) refers to the duplication or deletion of DNA segments larger than 1 kb. 
+#CNV's are structural variations in the genome which range in length between 50 bp and 1 Mbp. 
+#Copy number variations or CNVs are the structural variations that cover more than 1kb of DNA sequence. 
+#Copy number variation (CNV) is a frequently observed deviation from the diploid state due to duplication or deletion of genomic regions.
+#The single nucleotide polymorphism (SNP), on the other hand, is a single nucleotide change or a point mutation that is found in more than 1% of the population.
+#Both CNV and SNPs are immensely valuable in genetic screening studies and kinship analysis.There are five forms of CNVs. 
+#The first is called a deletion. A loss of a DNA segment can reduce  the copy number of a gene or a group of genes. 
+#The second is called tandem duplication. Here, a copy of a chromosomal segment is inserted into an adjacent region. 
+#The third is called noncontiguous duplication. Here, a chromosomal segment duplicates and inserts into a distant chromosomal region or a different chromosome. 
+#The fourth form is called Multiallelic CNV. A segment of DNA duplicates several times and results in the formation of multiple alleles of a gene. 
+#The fifth form is called complex rearrangement.
+
+#CNVs are widespread among humans - on an average 12 CNVs exist per individual in comparison to the reference genome. 
+#They have also been shown to play a role in diseases such as autism, breast cancer, obesity, Alzheimer’s disease and schizophrenia among other diseases.
+#Germ line versus somatic CNV Germ line CNV are relatively short (a few bp to a few Mbp) copy number changes that the individual inherits from one of the two 
+#parental gametes and thus are typically present in 100% of cells.
+#Somatic CNV (often called CNA where A stands for alterations or aberration) are copy number changes of any size and amount (from a few bases to whole chromosomes) 
+#that happen (and often carry on happening) in cancer cells. Cancer cells can be aneuploid (that means they are largely triploid, tetraploid or even aploid) 
+#and can have high focal amplifications (some regions could have many copies: it is not unusual to have 8-12 copies for some regions). 
+#Furthermore, because tumor samples are typically an admixture of normal and cancer cells, the tumor purity in unknown and variable.
+
+#Different algorithms make different assumptions while handling somatic or germ line CNV. Typically, germ line cnv caller can assume:
+#The genome is largely diploid.
+#The sample is pure and homogeneous.
+#Any gain or loss should be 50% move or 50% less coverage.
+#For these reasons, the algorithms can focus more on associating p-values for each call; it is possible to estimate false positive and false negative rates.
+#Somatic CNA callers cannot make any of the assumption above, or if they do, they have limited scope.
+
+#CNVs can be experimentally detected based on comparative genomic hybridization, and computationally inferred from SNP-arrays or next-generation sequencing data. 
+#These technologies for CNV detection have in common that they report, for each sample under study, genomic regions that are duplicated or deleted with respect to a reference.
+#Such regions are denoted as CNV calls in the following and will be considered the starting point for analysis.
+#CNVs can be experimentally detected based on comparative genomic hybridization, and computationally inferred from SNP-arrays or next-generation sequencing data. 
+#These technologies for CNV detection have in common that they report, for each sample under study, genomic regions that are duplicated or deleted with respect to a reference. 
+#Such regions are denoted as CNV calls and will be considered the starting point for analysis with the CNVRanger package.
+#The CNVRanger package imports CNV calls from a simple file format into R, and stores them in dedicated Bioconductor data structures, 
+#and implements three frequently used approaches for summarizing CNV calls across a population: 
+#(i) the CNVRuler procedure that trims region margins based on regional density Kim et al., 2012, 
+#(ii) the reciprocal overlap procedure that requires sufficient mutual overlap between calls Conrad et al., 2010, and 
+#(iii) the GISTIC procedure that identifies recurrent CNV regions Beroukhim et al., 2007.
+#CNVRanger builds on regioneR for overlap analysis of CNVs with functional genomic regions, and implements RNA-seq expression Quantitative Trait Loci (eQTL) analysis 
+#for CNVs by interfacing with edgeR, 
+
+#CNVRanger reads CNV calls from a simple file format, providing at least chromosome, start position, end position, sample ID, and integer copy number for each call.
+#The last column contains the integer copy number state for each call, encoded as
+
+#0: homozygous deletion (2-copy loss)
+#1: heterozygous deletion (1-copy loss)
+#2: normal diploid state
+#3: 1-copy gain
+#4: amplification (>= 2-copy gain)
+
+#For CNV detection software that uses a different encoding, it is necessary to convert to the above encoding. For example, the GISTIC2 procedure that was used to 
+#generate our Sumamrized Experiment CNV block, uses the following format which can be converted by simply adding 2:
+
+#-2: homozygous deletion (2-copy loss)
+#-1: heterozygous deletion (1-copy loss)
+#0: normal diploid state
+#1: 1-copy gain
+#2: amplification (>= 2-copy gain)
+
+#In CNV analysis, it is often of interest to summarize individual calls across the population, (i.e. to define CNV regions), for subsequent association analysis with expression 
+#and phenotype data. In the simplest case, this just merges overlapping individual calls into summarized regions. However, this typically inflates CNV region size, 
+#and more appropriate approaches have been developed for this purpose.There is need for quality control of CNV calls and appropriate accounting for sources of technical bias 
+#before applying these summarization functions (or in general downstream analysis with CNVRanger).For instance, protocols for read-depth CNV calling typically exclude calls 
+#overlapping defined repetitive and low-complexity regions including the UCSC list of segmental duplications Trost et al., 2018, Zhou et al., 2018. We also note that CNVnator, 
+#a very popular read-depth CNV caller, implements the q0-filter to explicitely flag and, if desired, exclude calls that are likely to stem from such regions.
+#If systematically over-represented in the input CNV calls, summarization procedures such as GISTIC will identify these regions as recurrent independent of whether there 
+#are biological or technical reasons for that.In particular in cancer, it is important to distinguish driver from passenger mutations, i.e. to distinguish meaningful events from random background aberrations. 
+#The GISTIC method identifies those regions of the genome that are aberrant more often than would be expected by chance, with greater weight given to high amplitude events 
+#(high-level copy-number gains or homozygous deletions) that are less likely to represent random aberrations
+#GISTIC is a tool to identify genes targeted by somatic copy number variation (CNV). The GISTIC algorithm defines CNV boundaries by a user-defined confidence level.
+
+#Module Name:	GISTIC2
+#Description:	Genomic Identification of Significant Targets in Cancer, version 2.0
+#Authors:	Gad Getz, Rameen Beroukhim, Craig Mermel, Steve Schumacher and Jen Dobson
+#Date:	27 Mar 2017
+#Release:	2.0.23
+#Software interface: Command-line user interface
+#Language: Matlab
+#Operating system: Linux
+
+#The GISTIC module identifies regions of the genome that are significantly amplified or deleted across a set of samples. 
+#Each aberration is assigned a G-score that considers the amplitude of the aberration as well as the frequency of its occurrence across samples. 
+#False Discovery Rate q-values are then calculated for the aberrant regions, and regions with q-values below a user-defined threshold are considered significant. 
+#For each significant region, a "peak region" is identified, which is the part of the aberrant region with greatest amplitude and frequency of alteration. 
+#In addition, a "wide peak" is determined using a leave-one-out algorithm to allow for errors in the boundaries in a single sample. 
+#The "wide peak" boundaries are more robust for identifying the most likely gene targets in the region. Each significantly aberrant region is also tested to 
+#determine whether it results primarily from broad events (longer than half a chromosome arm), focal events, or significant levels of both. 
+#The GISTIC module reports the genomic locations and calculated q-values for the aberrant regions. It identifies the samples that exhibit each significant 
+#amplification or deletion, and it lists genes found in each "wide peak" region.
+
+#According to website https://www.bioconductor.org/packages/release/bioc/vignettes/MultiAssayExperiment/inst/doc/QuickStartMultiAssay.html, 
+#the assay matrix of our non-Genomic Range Summarized Experiment (gistict: SummarizedExperiment with 198 rows and 43 columns) 
+#obtained via miniACC MUltiAssayExperiment represents the GISTIC genomic copy number by gene. This apparently is a summary of filtered and statistically 
+#significant gene-based recurrent copy number lesions identified by GISTIC2 identified via the aforementioned GISTIC2 procedure
+
+#DIFFERENTIAL CNV gistic peaks ACROSS YOUNG AND OLD PATIENTS:
+#Exploring the SummarizedExperiemnt extracted from the initial miniACC MultiAssayExperiment:
+
+#TCGA Workflow: Analyze cancer genomics and epigenomics data using Bioconductor packages
+
+cnv_gistic<-miniACC.assays.comp.age.cnvcalls.ranges[[3]]
+#Alternatively:
+mACC.CN3
+
+#Creating a phenotype dataframe:
+phenoN3 <- data.frame(sample=colnames(assay(mACC.CN3)),patientID=colData(miniACC.assays.comp.age)$patientID, age.status=colData(miniACC.assays.comp.age)$years_to_birth)
+rownames(phenoN3)<-phenoN3$sample 
+cond2<-phenoN3$age.status
+gistic.peaks <- as.matrix(assay(mACC.CN3))
+sum(is.na(gistic.peaks))
+ 
+#As part of the exploration, we plot data
+boxplot(gistic.peaks)  
+boxplot(log2(gistic.peaks+2))
+
+#Hierarchical clustering
+x_cnv<-gistic.peaks
+
+#Euclidean distance
+clust.cor.ward <- hclust(dist(t(x_cnv)),method="ward.D2")
+plot(clust.cor.ward, main="hierarchical clustering", hang=-1,cex=0.8)
+#The ward.D2 hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average <- hclust(dist(t(x_cnv)),method="average")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8)
+#The average hierarchal clustering DOES NOT appear to reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average <- hclust(dist(t(x_cnv)),method="complete")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8)
+#The complete hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+#Correlation based distance
+clust.cor.ward <- hclust(as.dist(1-cor(x_cnv)),method="ward.D2")
+plot(clust.cor.ward, main="hierarchical clustering", hang=-1,cex=0.8)
+#The ward.D2 hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+clust.cor.average<- hclust(as.dist(1-cor(x_cnv)),method="average")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8) 
+#The average hierarchal clustering appears to reflect the segregation of 5 old and 5 young patients
+
+sum1<-sum(is.na(gistic.peaks))
+sum1
+ 
+#Density plot of gistic peaks (log10)
+#gistic.peaks_log <- log(gistic.peaks,10) 
+#d <- density(gistic.peaks_log)
+#plot(d,xlim=c(1,8),main="",ylim=c(0,.45),xlab="Raw CNV gistic peaks per gene after log10 transformation)", ylab="Density")
+#for (s in 1:length(colnames(gistic.peaks_log))){
+#  gistic.peaks_log <- log(gistic.peaks[,s],10) 
+#  d <- density(gistic.peaks_log)
+#  lines(d)
+#}
+#Error in density.default(gistic.peaks_log) : 'x' contains missing values
+
+#Box plots of raw gistic peaks after log10 transformation
+gistic.peaks_log <- log(gistic.peaks,10)
+boxplot(gistic.peaks_log , main="", xlab="", ylab="Raw CNV gistic peaks per gene after log10 transformation)",axes=FALSE)
+axis(2)
+axis(1,at=c(1:length(colnames(gistic.peaks_log))),labels=colnames(gistic.peaks_log),las=2,cex.axis=0.8)
+
+#Plot Heatmap with condition age.status as labels
+colnames(gistic.peaks)<-phenoN3$age.status 
+heatmap(gistic.peaks, col = topo.colors(50), margin=c(10,6))
+#patient is expressing many trcurrent genes lesions
+
+#PCA
+summary(pca.filt <- prcomp(t(x_cnv), scale=T )) 
+autoplot(pca.filt, data=phenoN3, colour="patientID", shape="age.status")
+
+#There does not appear to be segregation by age status
+#Note that a total of  21.26%+ 29.4 %= 50.66% variance is accounted for by the 
+#first 2 principal components PC1 and PC2 and corresponding eigenvector values
+
+
+#GGBIO VISUALIZATION OF GISTIC COPY NUMBER VARIATION (CNV) RECCURENT REGIONS:  
+
+hg19sub
+autoplot(hg19sub, layout = "circle", fill = "gray70")
+
+#Use the same data to create ideogram, label and scale track, it layouts the circle by the
+# order created from inside to outside
+#p <- ggbio() + circle(hg19sub, geom = "ideo", fill = "gray70") +
+#  circle(hg19sub, geom = "scale", size = 2) +
+#  circle(hg19sub, geom = "text", aes(label = seqnames), 
+#         vjust = 0, size = 3)
+#p
+
+# Then we add a "rectangle" track to show somatic CNV recurrent regions states which will  looks like vertical segments.
+cnv_gistic<-miniACC.assays.comp.age.cnvcalls.ranges[[3]]
+cnv_gr<-rowRanges(cnv_gistic)
+
+
+p <- ggbio() + circle(cnv_gr, geom = "rect", color = "steelblue") +
+  circle(hg19sub, geom = "ideo", fill = "gray70") +
+  circle(hg19sub, geom = "scale", size = 2) +
+  circle(hg19sub, geom = "text", aes(label = seqnames), 
+         vjust = 0, size = 3)
+p
+
+
+#Because copy number variation analysis is not mentioned in the DESeq / DESeq2 manual or edgeR, we  don't use DESeq / DESeq2  for that purpose. 
+#The data distribution of  CNV data will not match that expected by DESeq which expects a negative binomial distribution. 
+#CNV data is measured as discrete intervals, and so something like a Hidden Markov Model (HMM) is more commonly employed although it can be measured on a continuous scale too.
+#The "fundamental limitation" of trying to detect CNV from RNA-seq relates to the fact that a copy number event does not necessarily alter gene expression levels. 
+#A gene could easily be duplicated, for example, but, without the promoter sequence and/or transcription start site (TSS), 
+#it will not be expressed (or just expressed at negligible levels).EdgeR and DESeq2 can be used for ChIPSeq mostly for differential peak calling which is different from CNV. 
+#Data is counts and distribution is in accordance with RNAseq.CNV calling with a DE tool having the assumption that data is normally distributed does not in 
+#any way accord for finding CNV which works on discrete data. One needs to find the right tool and the right distribution for finding CNVs and there are plenty of 
+#technology to produce the data and tools to generate copy profiles from those data. One important this is properly accounting for allelic frequencies 
+#while scanning through the genome and then using segmentation for finding copy ratios. This cannot be done with DESeq2. 
+#Most DE tools assume that the biological variation has a continuous distribution (e.g. normal or gamma), but variation due to CNV would be discrete at 
+#integer multiples of the haploid coverage depth. 
+
+#Other options: Window  the genome in to 10kb bins; Compute  the reads number in every bins;Normalize the sequence depth and make sure the CNV value in every bin are in the same scale to have a #valid comparison. Use HMMcopy to tackle GC bias; CNVkit uses normals to create a reference to which it'll compare each sample.
+#CNVkit is a Python library and command-line software toolkit to infer and visualize copy number from high-throughput DNA sequencing data. It is designed for use with hybrid capture, including both #whole-exome and custom target panels, and short-read sequencing platforms such as Illumina and Ion Torrent.
+
+#DIFFERENTIAL GISTIC CNV ANALYSIS
+
+#We preliminarily use simplified linear regression model to assess differences in GISTIC gene-based recurrent lesion copy number variation:
+x_cnv_model<-x_cnv
+colnames(x_cnv_model)<-cond2
+ 
+x_cnv_model.t<-t(x_cnv_model)
+x_cnv_model.t.df<-as.data.frame(x_cnv_model.t)
+x_cnv_model.t.df$age.status<-as.factor(cond2)
+#x_cnv_model.t.df
+#Example of simple linear regression with single categorical variable factor age.status for first gene CNV:
+summary(lm(x_cnv_model.t.df$DIRAS3 ~ x_cnv_model.t.df$age.status))
+#Evidently, with p-value=0.242, DIRAS3 gene GISTIC CNV does not appear to be related to age.status
+#Now Run n regressions for all genes
+ 
+my_lms <- lapply(1:((ncol(x_cnv_model.t.df))-1), function(x) lm(x_cnv_model.t.df[,x] ~ x_cnv_model.t.df$age.status))
+# Extract just coefficients
+sapply(my_lms, coef)
+#For more info, get full summary call:
+summaries <- lapply(my_lms, summary)
+#Coefficents with p values:
+p_values<-lapply(summaries, function(x) x$coefficients[, c(1,4)])
+ 
+#Evidently, the lowest p-value of 0.0656 was obtained from list item index#98
+gene_cnv<-colnames(x_cnv_model.t.df[98])
+gene_cnv
+#The gene that had the lowest p-value for differential GISTIC cnv value with respect to young/old age.status is FOXO3.
+
+#r-squared values
+sapply(summaries, function(x) c(r_sq = x$r.squared, adj_r_sq = x$adj.r.squared))
+#The models are stored in a list, where model 3 is in my_lms[[3]] and so on.
+
+#plot(x_cnv_model.t.df[,x], pch = 16, col = "blue") #Plot the results
+#abline(lmTemp) #Add a regression line
+#summary(lmTemp)
+#plot(lmTemp$residuals, pch = 16, col = "red")
+
+
+#We now explore reading and processing GISTIC files and data via 3 alternative approaches (maftools, readGISTIC, drug_prediction)
+#before later treating our GISTIC recurrent lesion matrix from miniACC as individual call matrix to be then used in CNVRanger function approach:
+#TESTING MODIFIED DRUG PREDICTION FUNCTIONS TO PROCESS CNV GISTIC DATA
+cnvs_drug<-as.data.frame(rowRanges(cnv_gistic))
+cnv_df<-as.data.frame(assay(cnv_gistic))
+#Make sure rownames() are samples, and colnames() are genes by transposing dataframe.
+cnv_df.t<-t(cnv_df)
+#Determine the number of samples we want the CNVs to be amplified in. The default is 10.
+n=10
+#Indicate whether or not we want to test cnv data. If TRUE, we will test cnv data. If FALSE, we will test mutation data.
+cnv=TRUE
+wd<-tempdir()
+savedir<-setwd(wd)
+#Apply map_cnv() function to produce the file map.RData, which stores the object 'theCnvQuantVecList_mat'
+#map_cnv(Cnvs=cnvs_drug)
+#Error in map_cnv(Cnvs = cnvs_drug) : 
+#ERROR: Check colnames() of cnv data. colnames() must include Sample, Chromosome, Start, End, and Segment_Mean
+#>   403 genes were dropped because they have exons located on both strands
+#>   of the same reference sequence or on more than one reference sequence,
+#>   so cannot be represented by a single genomic range.
+#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a
+#>   GRangesList object, or use suppressMessages() to suppress this message.
+
+#load('map.RData') #This loads the object 'theCnvQuantVecList_mat', which was obtained using map_cnv()
+#Make sure this data is a data frame and that colnames() are samples.
+#data<-as.data.frame(t(theCnvQuantVecList_mat))
+#samps<-colnames(data)
+#colnames(data)<-substr(samps,1,nchar(samps)-12)
+#Apply idwas()#Apply idwas() to test each cnv and each drug. The p-values and beta-values for each test will be exported 
+#idwas(drug_prediction=cnv_df.t , data=data, n=n, cnv=cnv)
+#THIS APPROACH YIELDED ERRORS DURING EXECUTION AND WAS ABANDONED 
+
+
+#TESTING READ TCGA ACC GISTIC DATA DIRECTLY USING SPECIALIZED FUNCTIONS FOR GISTIC S4Vector OBJECT and summarize output files generated by GISTIC programme:
+
+#The readGistic function can take above files provided manually, or a directory containing GISTIC results and import all the relevant files:
+#readGistic(gisticAllLesionsFile = NULL,gisticAmpGenesFile = NULL,gisticDelGenesFile = NULL,gisticScoresFile = NULL,cnLevel = "all",isTCGA = FALSE,verbose = TRUE)
+
+#Arguments
+#gisticAllLesionsFile	= All Lesions file generated by gistic. e.g; all_lesions.conf_XX.txt, where XX is the confidence level. Required. Default NULL.
+#gisticAmpGenesFile=Amplification Genes file generated by gistic. e.g; amp_genes.conf_XX.txt, where XX is the confidence level. Default NULL.
+#gisticDelGenesFile=Deletion Genes file generated by gistic. e.g; del_genes.conf_XX.txt, where XX is the confidence level. Default NULL.
+#gisticScoresFile=scores.gistic file generated by gistic.
+#cnLevel	= level of CN changes to use. Can be 'all', 'deep' or 'shallow'. Default uses all i.e, genes with both 'shallow' or 'deep' CN changes
+#isTCGA= Is the data from TCGA. Default FALSE.
+#verbose= Default TRUE
+
+#Evidently, We REQUIRE the first of four files that are generated by GISTIC: i.e, all_lesions.conf_XX.txt. 
+#Based on the Sakar Khan's following youtube video Copy Number Variation Analysis using GISTIC - Tutorial :https://www.youtube.com/watch?v=Ssw7Ryao1x4&t=30s
+#and based on the following website url https://www.genepattern.org/modules/docs/GISTIC_2.0#gsc.tab=0
+#The format for this initial file includes the following columns:
+
+#All Lesions File (all_lesions.conf_XX.txt, where XX is the confidence level)
+#The all lesions file summarizes the results from the GISTIC run. It contains data about the significant regions of amplification and deletion as well as which samples are amplified or deleted in each of these regions. The identified regions are listed down the firstcolumn, and the samples are listed across the first row, starting in column 10.
+#Region Data
+#Columns 1-9 present the data about the significant regions as follows:
+#Unique Name: A name assigned to identify the region.
+#Descriptor: The genomic descriptor of that region
+#Wide Peak Limits: The “wide peak” boundaries most likely to contain the targeted genes. These are listed in genomic coordinates and marker (or probe) indices.
+#Peak Limits: The boundaries of the region of maximal amplification or deletion.
+#Region Limits: The boundaries of the entire significant region of amplification or deletion.
+#q values: The q-value of the peak region.
+#Residual q values after removing segments shared with higher peaks : The q-value of the peak region after removing (“peeling off”) amplifications or deletions that overlap other more significant peak regions in the same chromosome.
+#Broad or Focal: Identifies whether the region reaches significance due primarily to broad events (called “broad”), focal events (called “focal”), or independently significant broad and focal events (called “both”).
+#Amplitude Threshold: Key giving the meaning of values in the subsequent columns associated with each sample.
+
+#all-data-by_genes.txt=Gene Symbol, Gene ID (Entrez), Cytoband, SampleIDs
+
+#To obtain these aforementioned files in appropriate format, we examine our previously generatd RangedSummarizedExperiment:
+cnv_gistic_calls<-as.data.frame(assay(cnv_gistic))
+#This is not appropriate format for CNVRanger functions. We can either create an appropriate dataframe and Genomic Ranges List Object using the 
+#gistic assay CNV gistic recurrent lesion regions calls matrix in appropriate format for further analysis OR we can try to download the file in appropriate format as follows:
+
+query <- GDCquery(project = "TCGA-ACC",data.category = "Copy Number Variation",data.type = "Copy Number Segment",
+                                        barcode = c("TCGA-OR-A5J9-01A-11D-A29H-01","TCGA-OR-A5JE-01A-11D-A29H-01","TCGA-OR-A5JF-01A-11D-A29H-01","TCGA-OR-A5JI-01A-11D-A29H-01",
+                                                     "TCGA-OR-A5K0-01A-11D-A29H-01","TCGA-OR-A5KV-01A-11D-A29H-01","TCGA-OR-A5L5-01A-11D-A29H-01","TCGA-OR-A5LC-01A-11D-A29H-01","TCGA-OR-A5LE-01A-11D-A29H-01","TCGA-OR-A5LL-01A-11D-A29H-01"),
+                                        sample.type = c("Primary Tumor"))
+GDCdownload(query)
+data <- GDCprepare(query)
+data
+
+#Get the last run dates
+lastRunDate <- getFirehoseRunningDates()[1]
+lastAnalyseDate <- getFirehoseAnalyzeDates(1)
+#Download GISTIC results
+gistic <- getFirehoseData("ACC",gistic2_Date = getFirehoseRunningDates()[1]) #"20141017"
+# get GISTIC results
+gistic.allbygene <- gistic@GISTIC@AllByGene
+#gistic.thresholedbygene <- gistic@GISTIC@ThresholedByGene
+#Error: no slot of name "ThresholedByGene" for this object of class "FirehoseGISTIC"
+gistic.allbygene 
+
+#FOR ULTIMATELY USING CNVRanger package to convert individual calls into the GISTIC recurrent regions lesions we obtained via miniACC, 
+#WE ARE NOT SUCCESSFULLY OBTAINING THE NECESSARY GISTIC FILES WITH DATA VIA THE TCGA TOOLS
+
+#ALTERNATIVELY, WE TRY TO OBTAIN THE NECESSARY FILES VIA maftools package:
+#With advances in Cancer Genomics, Mutation Annotation Format (MAF) is being widely accepted and used to store somatic variants detected. 
+#The Cancer Genome Atlas Project has sequenced over 30 different cancers with sample size of each cancer type being over 200. 
+#Resulting data consisting of somatic variants are stored in the form of Mutation Annotation Format (MAF): 
+gistic_res_folder <- system.file("extdata", package = "maftools")
+laml.gistic = readGistic(gisticDir = gistic_res_folder, isTCGA = TRUE)
+all.lesions <- system.file("extdata", "all_lesions.conf_99.txt", package = "maftools")
+amp.genes <- system.file("extdata", "amp_genes.conf_99.txt", package = "maftools")
+del.genes <- system.file("extdata", "del_genes.conf_99.txt", package = "maftools")
+scores.gistic <- system.file("extdata", "scores.gistic", package = "maftools")
+laml.gistic = readGistic(gisticAllLesionsFile = all.lesions, gisticAmpGenesFile = amp.genes, gisticDelGenesFile = del.genes, gisticScoresFile = scores.gistic, isTCGA = TRUE)
+
+#gistic_maftools <- readGistic(gisticAllLesionsFile = "all_lesions.conf_99.txt", 
+#                              gisticAmpGenesFile = "amp_genes.conf_99.txt", 
+#                             gisticDelGenesFile = "del_genes.conf_99.txt", 
+#                              cnLevel = "all", gisticScoresFile = "scores.gistic")
+#Error: File 'all_lesions.conf_99.txt' does not exist or is non-readable. getwd()=='C:/Users/User/Documents'
+ 
+
+#There are three types of plots available to visualize gistic results:
+#genome plot
+gisticChromPlot(gistic = laml.gistic, markBands = "all")
+#Co-gisticChromPlot
+#Similarly, two GISTIC objects can be plotted side-by-side for cohort comparison. In this example, the same GISTIC object is used for demonstration.
+coGisticChromPlot(gistic1 = laml.gistic, gistic2 = laml.gistic, g1Name = "AML-1", g2Name = "AML-2", type = 'Amp')
+#oncoplot
+#This is similar to oncoplots except for copy number data. One can again sort the matrix according to annotations, if any. Below plot is the gistic results for LAML, sorted according to FAB classification. Plot shows that 7q deletions are virtually absent in M4 subtype where as it is widespread in other subtypes.
+#gisticOncoPlot(gistic = laml.gistic, clinicalData = getClinicalData(x = laml), clinicalFeatures = 'FAB_classification', sortByAnnotation = TRUE, top = 10)
+#Error in h(simpleError(msg, call)) : 
+#error in evaluating the argument 'x' in selecting a method for function 'getClinicalData': object 'laml' not found
+#Similar to MAF objects, there are methods available to access slots of GISTIC object - getSampleSummary, getGeneSummary and getCytoBandSummary. 
+#Summarized results can be written to output files using function write.GisticSummary.
+
+#BECAUSE WE DID NOT  OBTAIN THE NECESSARY ALL-CNV LESIONS FILE, WE WILL NOW ASSUME THAT OUR miniACC GISTIC matrix represents INDIVIDUAL CNV CALLS 
+#TO BE CONVERTED TO GISTIC RECURRENT REGIONS VIA CNVRANGER. BECAUSE WE WERE UNSUCCESSFUL IN PROCESSING THE ADDITIONAL CNV INDIVIDUAL CALLS RAGGED EXPERIMENT 
+#FROM TCGA, WE WILL INSTEAD TREAT THE GISTIC EXPERIMENT PROVIDED VIA miniACC AS QUANTIFICATION OF GENE-BASED INTEGER STATE COUNTS FOR RECURRING CNV LESIONS AND, 
+#TREAT INSTEAD THE GISTIC REGIONS AS THE "INDIVIDUAL CNV CALLS" THAT WE WILL THEN CONVERT INTO GENOMIC RANGE LIST OBJECT, READ IN BY CNV_RANGER, 
+#AND AGAIN PROCESS BY GISTIC2 TO YIELD THE STATISITCALLY SIGNIFICANT IDENTIFIED CHROMOSOME-WIDE RECURRENT REGIONS:
+
+#CREATING AN INDIVIDUAL CALL-LIKE INPUT GENOMICRANGELIST OBJECT FOR CNVRAnger USING OUR TCGA GISTIC SUMMARIZED EXPERIMENT:
+
+gensInfo_CNV<-getBM(attributes=c("hgnc_symbol","ensembl_gene_id","entrezgene_id","chromosome_name","start_position","end_position","description" ), filters=c("hgnc_symbol"), values=list(rownames(assay(mACC.CN3))), mart=ensembl102)
+gensInfo_CNV$length <- gensInfo_CNV$end_position - gensInfo_CNV$start_position
+range(gensInfo_CNV$length)
+table(duplicated(gensInfo_CNV$hgnc_symbol))  
+gensInfo_CNV[duplicated(gensInfo_CNV$hgnc_symbol),]
+length(setdiff(rownames(assay(mACC.CN3)), gensInfo_CNV$hgnc_symbol)) 
+countsFDF_CNV <- data.frame(ID=rownames(assay(mACC.CN3)),assay(mACC.CN3))
+countsFInfo_CNV <- right_join(countsFDF_CNV, gensInfo_CNV, by=c("ID"="hgnc_symbol")) 
+countsFInfo_CNV <- countsFInfo_CNV[!duplicated(countsFInfo_CNV$ID),] #After having checked duplications, just keep first result
+
+countsFInfo_CNV_backup<-countsFInfo_CNV
+colnames(countsFInfo_CNV_backup)[colnames(countsFInfo_CNV_backup) == 'chromosome_name'] <- 'chr'
+colnames(countsFInfo_CNV_backup)[colnames(countsFInfo_CNV_backup) == 'start_position'] <- 'start'
+colnames(countsFInfo_CNV_backup)[colnames(countsFInfo_CNV_backup) == 'end_position'] <- 'end'
+#colnames(countsFInfo_CNV_backup)[colnames(countsFInfo_CNV_backup) == 'chromosome_name'] <- 'state'
+
+ 
+#REPLACING THE FOLLOWING INCORRECTLY FORMATTED CHROMOSOME NAMES OBTAINED VIA BIOMART WITH THE CORRECTLY FORMATTED CHROMOSOME 
+#LOCATIONS FROM NCBI GENE DATABASE AND/OR UCSC GENOMIC BROWSER:
+
+
+#14   RPS6KA1  CHR_HG2058_PATCH       26529761     26575030  = CHROMOSOME 1
+#21   AKT3  CHR_HSCHR1_3_CTG32_1      243488233    243855434 = CHROMOSOME 1
+#29   CLDN7      CHR_HG2087_PATCH        7259903      7263983 = CHROMOSOME 17
+#36   PTEN  CHR_HG2334_PATCH       87863440     87966341 = CHROMOSOME 10
+#69   YWHAE   CHR_HSCHR17_2_CTG2        1247054      1303157 =  CHROMOSOME 17
+#85   MAPT      CHR_HSCHR17_2_CTG5       45906010     46039943 = CHROMOSOME 17
+#102  ACACA CHR_HSCHR17_7_CTG4       37086456     37411442 = CHROMOSOME 17
+#119  EEF2K    CHR_HG926_PATCH       21992621     22075070 = CHROMOSOME 16
+#147  MYH11     CHR_HSCHR16_1_CTG1       15788326     15942169 = CHROMOSOME 16
+#179  HSPA1A CHR_HSCHR6_MHC_APD_CTG1       31882493     31884975 = CHROMOSOME 6
+#208  CHGA  CHR_HSCHR14_7_CTG1       92923080     92935293 = CHROMOSOME 14
+
+#countsFInfo_CNV_backup %>% mutate(chr = ifelse(ID == "RPS6KA1", "1" , chr))
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "RPS6KA1", "chr"] <- "1"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "AKT3", "chr"] <- "1"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "CLDN7", "chr"] <- "17"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "PTEN", "chr"] <- "10"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "YWHAE", "chr"] <- "17"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "MAPT", "chr"] <- "17"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "ACACA", "chr"] <- "17"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "EEF2K", "chr"] <- "16"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "MYH11", "chr"] <- "16"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "HSPA1A", "chr"] <- "6"
+countsFInfo_CNV_backup[countsFInfo_CNV_backup$ID == "CHGA", "chr"] <- "14"
+
+#Extracting and subsetting the  mRNA-seq count matrix (e.g. filtered, No-NA, chromosome name-corrected, no-duplicate geneID row) 
+#from the summary dataframe countsFInfo_backup
+rownames(countsFInfo_CNV_backup)<-countsFInfo_CNV_backup$ID
+#PCA for CNV
+countsFInfo_CNV_backup_PCAMFA<-countsFInfo_CNV_backup[,2:11]
+ 
+#Transpose
+countsFInfo_CNV_backup_PCAMFA.t<-t(countsFInfo_CNV_backup_PCAMFA)
+# assign names, we include a cnv suffix to differentiate genes from micexp or exp
+colnames(countsFInfo_CNV_backup_PCAMFA.t)<-paste(countsFInfo_CNV_backup$ID,"cnv",sep=".")
+#Construct data.frame to perform PCA
+cnv4pca<-data.frame(cond2,countsFInfo_CNV_backup_PCAMFA.t)
+res.pca.cnv<-PCA(cnv4pca,quali.sup=1)
+res.pca.cnv
+plot(res.pca.cnv,habillage=1)
+#countsFInfo_CNV_backup
+#We observe differences between the young and old patient samples (in dim 1 and dim2)
+
+#FOR LATER CNV/mRNA-Seq EXPRESSION CNVRANGER-BASED CORRELATION ANALYSIS, EQUALIZE GENEIDs for BOTH FILTERED, LOG-TRANSFORMED, 
+#NORMALIZED mRNA COUNTS and GISTIC CNV RECURRENT LEGIONS PEAKS:
+
+countsF_extracted<-as.matrix(countsFInfo_backup[,2:11])
+rownames(countsF_extracted)<-countsFInfo_backup$ID
+#Setting equal the sampleIDs:
+#colnames(normalized_df.log)<-colnames(assay(mACC.CN3))
+colnames(countsF_extracted)<-colnames(countsFInfo_CNV_backup[,2:11])
+
+phenoN2<-phenoN
+rownames(phenoN2)<-colnames(countsF_extracted)
+phenoN2$sample<-colnames(countsF_extracted)
+cond2<-phenoN2$age.status 
+
+#Checking NA
+sum_na<-sum(is.na(countsF_extracted))
+sum_na
+
+#I next normalize the mRNA-seq count matrix using DESeq2 and then transformed to log2:
+#DESeq2 on COUNT MATRIX:
+#Converting to integer to avoid error
+countsF_extracted_int<-countsF_extracted
+object.size(countsF_extracted_int)
+mode(countsF_extracted_int) <- "integer"
+object.size(countsF_extracted_int)
+
+cds <- DESeqDataSetFromMatrix(countData = countsF_extracted_int,colData = phenoN2,design = ~ age.status) 
+dds <- estimateSizeFactors(cds)
+normalized_df <- counts(dds, normalized=TRUE)
+normalized_df_log <- log2(normalized_df+1)
+#FILTERED, NO-NA, NORMALIZED, LOG-TRANSFORMED MATRIX READY TO BE PROCESSED
+#######################################################
+
+#Subset to ensure same gene set is later co-analyzed
+countsFInfo_CNV_backup_sub<-countsFInfo_CNV_backup[ rownames(countsFInfo_CNV_backup) %in% rownames(normalized_df_log), ]
+ 
+#NOT TRANSPOSED df1_new<-as.data.frame(t(df1))
+df1<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5J9.01A.11D.A29H.01" )]
+df1$sampleID<-"TCGA.OR.A5J9.01A.11D.A29H.01"
+colnames(df1)<-c("ID","chr", "start", "end", "state", "sampleID")
+df1<-df1[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df2<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5JE.01A.11D.A29H.01" )]
+df2$sampleID<-"TCGA.OR.A5JE.01A.11D.A29H.01"
+colnames(df2)<-c("ID","chr", "start", "end", "state", "sampleID")
+df2<-df2[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df3<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5JF.01A.11D.A29H.01" )]
+df3$sampleID<-"TCGA.OR.A5JF.01A.11D.A29H.01"
+colnames(df3)<-c("ID","chr", "start", "end", "state", "sampleID")
+df3<-df3[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df4<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5JI.01A.11D.A29H.01" )]
+df4$sampleID<-"TCGA.OR.A5JI.01A.11D.A29H.01"
+colnames(df4)<-c("ID","chr", "start", "end", "state", "sampleID")
+df4<-df4[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df5<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5K0.01A.11D.A29H.01" )]
+df5$sampleID<-"TCGA.OR.A5K0.01A.11D.A29H.01"
+colnames(df5)<-c("ID","chr", "start", "end", "state", "sampleID")
+df5<-df5[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df6<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5KV.01A.11D.A29H.01" )]
+df6$sampleID<-"TCGA.OR.A5KV.01A.11D.A29H.01"
+colnames(df6)<-c("ID","chr", "start", "end", "state", "sampleID")
+df6<-df6[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df7<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5L5.01A.11D.A29H.01" )]
+df7$sampleID<-"TCGA.OR.A5L5.01A.11D.A29H.01"
+colnames(df7)<-c("ID","chr", "start", "end", "state", "sampleID")
+df7<-df7[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df8<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5LC.01A.11D.A29H.01" )]
+df8$sampleID<-"TCGA.OR.A5LC.01A.11D.A29H.01"
+colnames(df8)<-c("ID","chr", "start", "end", "state", "sampleID")
+df8<-df8[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df9<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5LE.01A.11D.A29H.01" )]
+df9$sampleID<-"TCGA.OR.A5LE.01A.11D.A29H.01"
+colnames(df9)<-c("ID","chr", "start", "end", "state", "sampleID")
+df9<-df9[,c("ID","chr", "start", "end", "sampleID","state")]
+
+df10<-countsFInfo_CNV_backup_sub[, c("ID","chr", "start", "end", "TCGA.OR.A5LL.01A.11D.A29H.01" )]
+df10$sampleID<-"TCGA.OR.A5LL.01A.11D.A29H.01"
+colnames(df10)<-c("ID","chr", "start", "end", "state", "sampleID")
+df10<-df10[,c("ID","chr", "start", "end", "sampleID","state")]
+
+CNV_calls<-rbind(df1, df2, df3,df4, df5, df6, df7, df8, df9, df10)
+
+CNV_calls_sort<-CNV_calls[order(CNV_calls$ID,decreasing = FALSE), ]
+#ADDING value to 2 to state to convert from GISTIC format to CNVRanger format:
+
+#CNV_calls_sort_add<-apply(CNV_calls_sort,1,function(x) x["state"]+2)
+CNV_calls_sort$state<-CNV_calls_sort[,6]+2  
+nrow(CNV_calls_sort)
+rownames(CNV_calls_sort)<-c(1:nrow(CNV_calls_sort))
+CNV_calls_sort_sort2<-CNV_calls_sort[order(CNV_calls_sort$chr,CNV_calls_sort$start), ] 
+rownames(CNV_calls_sort_sort2)<-c(1:nrow(CNV_calls_sort_sort2))
+CNV_calls_sort_sort2<-CNV_calls_sort_sort2[, c("chr","start", "end","sampleID", "state","ID")]
+CNV_calls_sort_sort2$chr<-paste0("chr",CNV_calls_sort_sort2$chr )
+length(unique(CNV_calls_sort_sort2[,"sampleID"]))
+ 
+#We have genomic ranges object for genes in ENSEMBL format OR HSBC GENE ID FORMAT:
+df_sel_gene<-countsFInfo_CNV_backup_sub[, c("chr","start","end", "ensembl_gene_id", "ID")]
+df_sel_gene$strand="*" 
+df_sel_gene$score=1
+df_sel_gene$chr<-paste0("chr", df_sel_gene$chr )
+df_sel_gene<-df_sel_gene[, c("chr","start","end", "strand", "score", "ensembl_gene_id", "ID")]
+ 
+gr_sel_gene<-makeGRangesFromDataFrame(df_sel_gene,keep.extra.columns=TRUE)
+gr_sel_gene_hgnc<-gr_sel_gene
+gr_sel_gene_ensembl<-gr_sel_gene
+#split.field = "ensembl_gene_id"
+#names.field = "ensembl_gene_id"
+#ignore.strand=TRUE
+#names(gr_sel_gene)<-mcols(gr_sel_gene)$ensembl_gene_id 
+#names(gr_sel_gene_hgnc)<-mcols(gr_sel_gene_hgnc)$ID 
+ 
+#Once read into an R data.frame, we group the calls by sample ID and convert them to a GRangesList. 
+#Each element of the list corresponds to a sample, and contains the genomic coordinates of the CNV calls for this sample 
+#(along with the copy number state in the state metadata column)
+grl <- GenomicRanges::makeGRangesListFromDataFrame(CNV_calls_sort_sort2, split.field="sampleID", keep.extra.columns=TRUE)
+grl <- GenomicRanges::sort(grl)
+grl
+
+#Specifically developed for CNV calls inferred from SNP-chip data, r Biocpkg("CNVRanger") allows to carry out a probe-level genome-wide association study (GWAS) 
+#with quantitative phenotypes. As previously described da Silva et al., 2016, we construct CNV segments from probes representing common CN polymorphisms (allele frequency >1\%), and carry out a GWAS as implemented in PLINK using a standard linear regression of phenotype on allele dosage.
+#For CNV segments composed of multiple probes, the segment p-value is chosen from the probe p-values, using either the probe with minimum p-value or the probe with maximum CNV frequency.
+#For compatibility with PLINK's fam file format, we create another phenotype information dataframe  containing four columns representing patient traits from our MultiAssayExperiment
+phenoN4 <- data.frame(sample.id=colnames(assay(mACC.CN3)),fam=colData(miniACC.assays.comp.age)$race,sex=colData(miniACC.assays.comp.age)$gender, age.status=colData(miniACC.assays.comp.age)$years_to_birth)
+ 
+#We combine the GISTIC CNV recurrent lesions peak "calls" with the phenotype information in a RaggedExperiment for coordinated representation and analysis:
+re_gwas <- RaggedExperiment::RaggedExperiment(grl, colData=phenoN4)
+re_gwas 
+ 
+#Given a RaggedExperiment storing CNV calls together with phenotype information, and optionally a map file for probe-level coordinates, 
+#the setupCnvGWAS function sets up all files needed for the GWAS analysis. The information required for analysis is stored in the resulting phen.info list:
+#phen.info <- setupCnvGWAS("example", cnv.out.loc=re_gwas)
+#phen.info
+#Error in cnv.p.df[, 3] : subscript out of bounds
+#In addition: There were 50 or more warnings (use warnings() to see the first 50)
+#warnings()
+#1: In .merge_two_Seqinfo_objects(x, y) :
+#The 2 combined objects have no sequence levels in common. (Use suppressWarnings() to suppress this warning.)
+#The last item of the list displays the working directory:
+#all.paths <- phen.info$all.paths
+#all.paths
+#For the GWAS, chromosome names are assumed to be integer (i.e. 1, 2, 3, ...).
+#We can then run the actual CNV-GWAS, here without correction for multiple testing which is done for demonstration only. 
+#In real analyses, multiple testing correction is recommended to avoid inflation of false positive findings.
+#segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, method.m.test="none")
+#segs.pvalue.gr
+#DUE TO ERROR STATEMENT, WE NEED TO FOREGO EXECUTION OF cnvGWAS() method
+
+#In CNV analysis, it is often of interest to summarize individual calls across the population, (i.e. to define CNV regions), 
+#for subsequent association analysis with expression and phenotype data. In the simplest case, this just merges overlapping individual 
+#calls into summarized regions.We will use GISTIC process:By setting est.recur=TRUE, we deploy a GISTIC-like significance estimation
+cnvrs <- populationRanges(grl, density=0.1, est.recur=TRUE)
+cnvrs 
+
+#plotRecurrentRegions(regs, genome, chr, pthresh = 0.05)
+#We filter for recurrent CNVs that exceed a significance threshold of 0.05.
+subset(cnvrs, pvalue < 0.05)
+
+#GRanges object with 28 ranges and 3 metadata columns:
+
+#We illustrate the landscape of recurrent CNV regions using the function plotRecurrentRegions.
+#We therefore provide the summarized CNV regions, a valid UCSC genome assembly, and a chromosome of interest.
+
+plotRecurrentRegions(cnvrs, genome="hg19", chr="chr1")
+plotRecurrentRegions(cnvrs, genome="hg19", chr="chr22")
+plotRecurrentRegions(cnvrs, genome="hg19", chr="chr5")
+plotRecurrentRegions(cnvrs, genome="hg19", chr="chrX")
+
+sel.genes <- subset(gr_sel_gene, seqnames %in% paste0("chr", 1:2))
+sel.genes_hgnc <- subset(gr_sel_gene_hgnc, seqnames %in% paste0("chr", 1:2))
+sel.cnvrs <- subset(cnvrs, seqnames %in% paste0("chr", 1:2))
+
+#The findOverlaps function from the GenomicRanges package is a general function for finding overlaps between two sets of genomic regions. 
+#Here, we use the function to find protein-coding genes overlapping the summarized CNV regions.
+#Resulting overlaps are represented as a Hits object, from which overlapping query and subject regions can be obtained with dedicated accessor 
+#functions (named queryHits and subjectHits, respectively). Here, we use these functions to also annotate the CNV type (gain/loss) for genes overlapping with CNVs.
+
+olaps <- GenomicRanges::findOverlaps(sel.genes, sel.cnvrs, ignore.strand=TRUE)
+qh <- S4Vectors::queryHits(olaps)
+sh <- S4Vectors::subjectHits(olaps)
+cgenes <- sel.genes[qh]
+cgenes$type <- sel.cnvrs$type[sh]
+subset(cgenes, select = "type")
+
+#GRanges object with 33 ranges and 1 metadata column:
+
+olaps_hgnc <- GenomicRanges::findOverlaps(sel.genes_hgnc, sel.cnvrs, ignore.strand=TRUE)
+qh_hgnc <- S4Vectors::queryHits(olaps_hgnc)
+sh_hgnc <- S4Vectors::subjectHits(olaps_hgnc)
+cgenes_hgnc <- sel.genes_hgnc[qh_hgnc]
+cgenes_hgnc$type <- sel.cnvrs$type[sh_hgnc]
+subset(cgenes_hgnc, select = "type")
+
+#GRanges object with 33 ranges and 1 metadata column:
+
+#We illustrate the original CNV calls on overlapping genomic features (here: protein-coding genes).
+#For this purpose, an oncoPrint plot provides a useful summary in a rectangular fashion (genes in the rows, samples in the columns).
+#Stacked barplots on the top and the right of the plot display the number of altered genes per sample and the number of altered samples per gene, respectively.
+
+cnvOncoPrint(grl, cgenes)
+cnvOncoPrint(grl, cgenes_hgnc)
+
+#Overlap permutation test
+#As a certain amount of overlap can be expected just by chance, an assessment of statistical significance is needed to decide whether the observed overlap 
+#is greater (enrichment) or less (depletion) than expected by chance.The regioneR package implements a general framework for testing overlaps of genomic regions
+#based on permutation sampling. This allows to repeatedly sample random regions from the genome, matching size and chromosomal distribution of the region set under 
+#study (here: the CNV regions). By recomputing the overlap with the functional features in each permutation, statistical significance of the observed overlap 
+#can be assessed.We demonstrate in the following how this strategy can be used to assess the overlap between the detected CNV regions and protein-coding regions 
+#in the human genome. We expect to find a depletion as protein-coding regions are highly conserved and rarely subject to long-range structural variation such as CNV.
+#Hence, is the overlap between CNVs and protein-coding genes less than expected by chance?To answer this question, we apply an overlap permutation test 
+#with 100 permutations (ntimes=100), while maintaining chromosomal distribution of the CNV region set (per.chromosome=TRUE). 
+#Furthermore, we use the option count.once=TRUE to count an overlapping CNV region only once, even if it overlaps with 2 or more genes. 
+#We also allow random regions to be sampled from the entire genome (mask=NA), although in certain scenarios masking certain regions such 
+#as telomeres and centromeres is advisable. Also note that we use 100 permutations for demonstration only. 
+#To draw robust conclusions a minimum of 1000 permutations should be carried out.
+
+#BSgenome.Hsapiens.UCSC.hg38, except that each of them has the 4 following masks on top: 
+#(1) the mask of assembly gaps (AGAPS mask), (2) the mask of intra-contig ambiguities (AMB mask), 
+#(3) the mask of repeats from RepeatMasker (RM mask), and (4) the mask of repeats from Tandem Repeats Finder (TRF mask). 
+#Only the AGAPS and AMB masks are "active" by default. The sequences are stored in MaskedDNAString objects.
+res <- regioneR::overlapPermTest(A=sel.cnvrs, B=sel.genes, ntimes=100, genome="hg38", mask=NA, per.chromosome=TRUE, count.once=TRUE)
+res
+
+summary(res[[1]]$permuted)
+
+#The resulting permutation p-value indicates a significant depletion. Out of the 197 CNV regions (cnvrs object), 
+#33 overlap with at least one gene.
+plot(res)
+
+#RE-attempting with entire gene set(not just chromosomes 1 and 2):
+res2 <- regioneR::overlapPermTest(A=cnvrs, B=gr_sel_gene, ntimes=100, genome="hg38", mask=NA, per.chromosome=TRUE, count.once=TRUE)
+res2
+
+summary(res2[[1]]$permuted)
+plot(res2)
+#A more pronounced peak became apparent
+
+
+
+```
+
+
+
+**mRNA-Seq AND GISTIC CNV DATA BLOCK CORRELATION ANALYSIS**
+```{r correlation1}
+#Studies of expression quantitative trait loci (eQTLs) aim at the discovery of genetic variants that explain variation in gene expression levels 
+#(Nica and Dermitzakis, 2013). Mainly applied in the context of SNPs, the concept also naturally extends to the analysis of CNVs.
+#The CNVRanger package implements association testing between CNV regions and RNA-seq read counts using edgeR, 
+#which applies generalized linear models based on the negative-binomial distribution while incorporating normalization factors for different library sizes.
+#In the case of only one CN state deviating from 2n for a CNV region under investigation, this reduces to the classical 2-group comparison. 
+#For more than two states (e.g. 0n, 1n, 2n), edgeR’s ANOVA-like test is applied to test all deviating groups 
+#for significant expression differences relative to 2n.
+#Assuming distinct modes of action, effects observed in the CNV-expression analysis are typically divided into (i) local effects (cis), 
+#where expression changes coincide with CNVs in the respective genes, and (ii) distal effects (trans), where CNVs supposedly affect trans-acting regulators 
+#such as transcription factors.However, due to power considerations and to avoid detection of spurious effects, stringent filtering of 
+#(i) not sufficiently expressed genes, and (ii) CNV regions with insufficient sample size in groups deviating from 2n, should be carried out 
+#when testing for distal effects. Local effects have a clear spatial indication and the number of genes locating in or close to a CNV region of 
+#interest is typically small; testing for differential expression between CN states is thus generally better powered for local effects 
+#and less stringent filter criteria can be applied.In the following, we carry out CNV-expression association analysis by providing the 
+#CNV regions to test (cnvrs), the individual CNV calls (grl) to determine per-sample CN state in each CNV region, the RNA-seq read counts (rse), 
+#and the size of the genomic window around each CNV region (window). The window argument thereby determines which genes are considered for testing 
+#for each CNV region and is set here to 1 Mbp.Further, use the filter.by.expr and min.samples arguments to exclude from the analysis 
+#(i) genes with very low read count across samples, and (ii) CNV regions with fewer than min.samples samples in a group deviating from 2n.
+
+rcounts<-normalized_df_log
+rcounts<-rcounts[rownames(rcounts) %in% rownames(df_sel_gene),]
+ 
+#traceback()
+#RENAME SAMPLEID NAMES FOR ALL OBJECTS:
+test<-gr_sel_gene_hgnc
+#names(gr_sel_gene_ensembl)<-mcols(gr_sel_gene_ensembl)$ensembl_gene_id
+#names(gr_sel_gene_hgnc)<-mcols(gr_sel_gene_hgnc)$ID
+
+rranges <- GenomicRanges::granges(test)[rownames(rcounts)]
+rse <- SummarizedExperiment(assays=list(rcounts=rcounts), rowRanges=rranges)
+rse
+
+res <- cnvEQTL(cnvrs, grl, rse,  min.samples=1,window = "1Mbp", verbose = TRUE)
+
+#The resulting GRangesList contains an entry for each CNV region tested, storing the genes tested in the genomic window around the CNV region, 
+#and (i) log2 fold change with respect to the 2n group, (ii) edgeR's DE p-value, and (iii) the (per default) Benjamini-Hochberg adjusted p-value.
+
+#We can illustrate differential expression of genes in the neighborhood of a CNV region of interest using the function plotEQTL.
+#The following regions are able to be graphically depicted: 1,2,3,4,8,9,13,16,23,34,35
+res[2]
+r <- GRanges(names(res)[2])
+plotEQTL(cnvr=r, genes=res[[2]], genome="hg19", cn="CN1") 
+
+###########################################CORRELATION OF RAW mRNA-Seq and GISTIC CNV DATA ACROSS ALL PATIENTS##########################
+
+mRNA_expr<-miniACC.assays.comp.age.cnvcalls.ranges[[2]]
+cnv_gistic<-miniACC.assays.comp.age.cnvcalls.ranges[[3]]
+cnv_gistic_assay<-assay(cnv_gistic)
+mRNA_expr_assay<-assay(mRNA_expr)
+colnames(cnv_gistic_assay)==colnames(mRNA_expr_assay)  
+colnames(cnv_gistic_assay)<-colnames(mRNA_expr_assay)
+# Let's correlate first gene (first row):
+plot(log2(mRNA_expr_assay[1,]),cnv_gistic_assay[1,])   
+cor.test(log2(mRNA_expr_assay[1,]),cnv_gistic_assay[1,], method="spearman") 
+
+#0.6396021 is lower correlation R2 coefficient than firebrowse:0.8455
+
+mRNA_expr_assay_m <- as.matrix(mRNA_expr_assay[,1:10])
+cnv_gistic_assay_m <- as.matrix(cnv_gistic_assay[,1:10])
+rownames(mRNA_expr_assay_m)<-rownames(mRNA_expr_assay) 
+rownames(cnv_gistic_assay_m)<-rownames(cnv_gistic_assay)  
+
+#Determining how data are distributed for first gene (Should be matrix?)
+hist(as.numeric(mRNA_expr_assay[1,1:10]))
+hist(as.numeric(cnv_gistic_assay[1,1:10]))
+
+#Determining how many other genes are strongly correlated between mRNA and CN assay omic data sets:
+cors <- diag(cor(t(mRNA_expr_assay_m),t(cnv_gistic_assay_m),method="pearson"))
+cors.sign <- cors[abs(cors)>0.67 & !is.na(cors)]
+cors.sign #12 genes
+cor_set<-mRNA_expr_assay_m[c(42,68,69,98,112,114,116,138,145,158,184,190),]
+rownames(cor_set)
+
+#These correspond to 12 genes that were strongly correlated between mRNA and CN assay omic data sets:
+##The mRNA-seq RAW, UNFILTERED, NON-LOG TRANSFORMED, NON-NORMALIZED expression levels and GISTIC CNV copy number of the 12 genes 
+#"ATM" "ACVRL1" "TSC1"   "GSK3A"  "KEAP1"  "XRCC1"  "NFKB1"  "NF2"    "MYH9"   "YWHAB"  "MSH2"   "DIABLO" are significantly correlated across ALL patients
+
+#Plotting these 12 genes
+op <- par(mfrow=c(2,2))
+#[1] "character"
+for (i in 1:length(cors.sign)){
+  #gene <- paste(gene, (rownames(mRNA_expr_assay)[i]), sep =" ") 
+  gene <- names(cors.sign)[i]
+  #x = as.numeric(mRNA_expr_assay_m[gene,])
+  #y = as.numeric(cnv_gistic_assay_m[gene,])
+  #plot(x,y, main=gene, cex.main=0.8)
+  #fit <- lm(y ~ x)
+  #abline(fit, col="chartreuse3") 
+}
+
+#Because miRNA data set is higher number of gene target rows compared to identical CN and mRNA dataset, it will not be used for correlation analysis
+
+###############################CORRELATION BETWEEN  FILTERED, TPM-NORMALIZED, LOG-TRANSFORMED mRNA-Seq and GISTIC CNV ACROSS YOUNG AND OLD PATIENT GROUPS######
+#INDEXES:
+#YOUNG PATIENTS=1,2,4,6,9
+#OLD PATIENTS=3,5,7,8,10
+
+#YOUNG PATIENTS
+#Determining how data are distributed for first gene for young patients(Should be matrix?)
+hist(as.numeric(mRNA_expr_assay[1,c(1,2,4,6,9)]))
+hist(as.numeric(cnv_gistic_assay[1,c(1,2,4,6,9)]))
+
+#Determining how many other genes are strongly correlated between mRNA and CNV assay omic data sets across YOUNG PATIENTS:
+cors.young <- diag(cor(t(mRNA_expr_assay_m[,c(1,2,4,6,9)]),t(cnv_gistic_assay_m[,c(1,2,4,6,9)]),method="pearson"))
+
+cors.young.sign <- cors.young[abs(cors.young)>0.67 & !is.na(cors.young)]
+cors.young.sign 
+length(cors.young.sign) #50 genes
+#cor_set_young<-mRNA_expr_assay_m[c(),]
+#rownames(cor_set_young)
+
+##The mRNA-seq RAW, UNFILTERED, NON-NORMALIZED, NON-LOG TRANSFORMED expression levels and GISTIC CNV copy number of 50 genes are 
+#significantly correlated across the 5 selected young patients
+
+#OLD PATIENTS
+#Determining how data are distributed for first gene for old patients(Should be matrix?)
+hist(as.numeric(mRNA_expr_assay[1,c(3,5,7,8,10)]))
+hist(as.numeric(cnv_gistic_assay[1,c(3,5,7,8,10)]))
+
+#Determining how many other genes are strongly correlated between mRNA and CN assay omic data sets across YOUNG PATIENTS:
+cors.old <- diag(cor(t(mRNA_expr_assay_m[,c(3,5,7,8,10)]),t(cnv_gistic_assay_m[,c(3,5,7,8,10)]),method="pearson"))
+
+cors.old.sign <- cors.old[abs(cors.old)>0.67 & !is.na(cors.old)]
+cors.old.sign 
+length(cors.old.sign) # 44 genes
+#cor_set_old<-mRNA_expr_assay_m[c(),]
+#rownames(cor_set_old)
+##The mRNA-seq RAW, UNFILTERED, NON-LOG TRANSFORMED, NON-NORMALIZED expression levels and GISTIC CNV copy number of 44 genes are 
+#significantly correlated across the 5 selected OLD patients
+
+########################################MFA ON FILTERED, TPM-NORMALIZED, LOG-TRANSFORMED mRNA-SEQ AND GISTIC CNV DATA##############################
+
+# GISTIC CNV
+countsFInfo_CNV_backup_MFA<-countsFInfo_CNV_backup[,2:11]
+# transpose
+countsFInfo_CNV_backup_MFA.t<-t(countsFInfo_CNV_backup_MFA)
+# assign names, we include a suffix to differentiate genes from expression
+colnames(countsFInfo_CNV_backup_MFA.t)<-paste(countsFInfo_CNV_backup$ID,"cnv",sep=".")
+#mRNA Expression
+countsF_TPM_LOG_DF_MFA <- countsF_TPM_LOG_DF[,1:10]
+colnames(countsF_TPM_LOG_DF_MFA) <- colnames(countsFInfo_CNV_backup_MFA) #To perform later MFA, we need to have the same names
+ 
+# transpose
+countsF_TPM_LOG_DF_MFA.t<-t(countsF_TPM_LOG_DF_MFA)
+# assign names, we include a suffix to differentiate genes from cnv
+colnames(countsF_TPM_LOG_DF_MFA.t)<-paste(countsF_TPM_LOG_DF$ID,"mRNAexp",sep=".")
+
+#miRNA Expression
+countsF_TPM_LOG_DF_micro_MFA<-countsF_TPM_LOG_DF_micro[,1:10]
+colnames(countsF_TPM_LOG_DF_micro_MFA) <- colnames(countsFInfo_CNV_backup_MFA)
+ 
+# transpose
+countsF_TPM_LOG_DF_micro_MFA.t<-t(countsF_TPM_LOG_DF_micro_MFA)
+# Assign names, we include a suffix to differentiate genes from cnv
+colnames(countsF_TPM_LOG_DF_micro_MFA.t)<-paste(countsF_TPM_LOG_DF_micro$ID,"miRNAexp",sep=".")
+
+mRNAexp.l<-nrow(countsF_TPM_LOG_DF_MFA )
+cnv.l<-nrow(countsFInfo_CNV_backup_MFA )
+dat4Facto<-data.frame(cond=as.factor(cond2),countsF_TPM_LOG_DF_MFA.t,countsFInfo_CNV_backup_MFA.t) 
+dim(dat4Facto)
+
+es = MFA(dat4Facto, group=c(1,mRNAexp.l,cnv.l), type=c("n",rep("c",2)), ncp=5, name.group=c("cond2","mRNAexp","cnv"),num.group.sup=c(1)) 
+
+#top correlated genes with first dimension (all of them come from the expression block)
+top10.1 <- sort(es$global.pca$var$cor[,"Dim.1"],decreasing=TRUE)[1:10]
+top10.1
+#top correlated genes with second dimension (all of them come from the CN block)
+top10.2 <- sort(es$global.pca$var$cor[,"Dim.2"],decreasing=TRUE)[1:10]
+top10.2
+```
+
+
+
+**mRNA-Seq AND mRNA-Seq DATA BLOCK CORRELATION ANALYSIS**
+```{r correlation2}
+#Correlations between the significative miRNAs and their significative targets obtained by TargetScan will be evaluated.
+#Correlations are measured and also some plots are generated on your hard disk. We will in general select those inversely 
+#correlated miRNAs and genes with a correlation Rho < -0.5 or 0.67
+
+x_rna_backup<-x_rna
+x_rna_backup<-as.matrix(x_rna_backup)
+x_micro_backup<-x_micro
+x_micro_backup<-as.matrix(x_micro_backup)
+colnames(x_rna_backup)<-colnames(x_micro_backup)
+
+mRNA.res2<-assay(mACC.exp3)
+mRNA.res2<-as.data.frame(mRNA.res2)
+mRNA.res2$Symbol<-rownames(mRNA.res2)
+miRNA.res.hsa2<-assay(mACC.mir3)
+miRNA.res.hsa2<-as.data.frame(miRNA.res.hsa2)
+miRNA.res.hsa2$miRNA<-rownames(miRNA.res.hsa2)
+
+#Correlations between the significative miRNAs and their significative targets obtained by TargetScan. 
+#Correlations are measured and also dot plots with regression lines are generated on your hard disk. 
+#Then, we will correct the p-values using FDR but we will in this case select those inversely correlated miRNAs and genes 
+#with a correlation Rho < -0.5 and a p-value < 0.05 to obtain more results.
+
+resultsComb<-"./ResultsComb"
+if(!dir.exists(resultsComb)) dir.create(resultsComb)
+#cols<-as.vector(car::recode(pData(my.targets)$Cond,"'chord' ='green';'notochord' ='blue';"))     
+#pchs<-as.vector(car::recode(pData(my.targets)$Cond, "'chord' =16;'notochord' =17;"))     
+
+miRNAs<-miRNA.res.hsa2$miRNA
+mRNAs<-mRNA.res2$Symbol
+
+miRNACorrel<-function(res.miRNA,res.mRNA,data.miRNA,data.mRNA,resultsDir){
+  #Function that looks for targets from a list of miRNAs and 
+  #returns a pdf with regression lines and a summary xls with correlations
+  #needs funcions miRNAGenes defined previously
+  miRNAs<-res.miRNA$miRNA 
+  mRNAs<-res.mRNA$Symbol
+  
+  for (i in miRNAs){
+    miRNA.genes<-miRNAGenes(i)
+    miRNA.genes.deg<-intersect(miRNA.genes,mRNAs)
+    #correlations 
+    lng<-length(miRNA.genes.deg)
+    if (lng>0){
+      cor.rho<-array(NA,lng)
+      cor.pval<-array(NA,lng)
+      miRNA.id<-rownames(res.miRNA[res.miRNA$miRNA==i,])
+      y=as.vector(data.miRNA[miRNA.id,])
+      
+      #pdf(file.path(resultsComb, paste0(miRNA.id,".corr.mRNA.miRNA.pdf")))
+      for (j in 1:lng){
+        mRNA<-miRNA.genes.deg[j]
+        mRNA.id<-rownames(res.mRNA[!is.na(res.mRNA$Symbol) & res.mRNA$Symbol==mRNA,])[1]  
+        x=as.vector(data.mRNA[mRNA.id,])
+        cor<-cor.test(x,y, method = "spearman",exact=FALSE)
+        cor.pval[j]<-cor$p.value
+        cor.rho[j]<-cor$estimate 
+        #we will plot just those combinations having a p.value<0.05 and a regression coef above 0.5 (positive or negative)
+        #if (cor$p.value < 0.05 & cor$estimate<(-0.5)){ 
+        #plot(x, y, main=mRNA,
+        #xlab="log2RMA expression",
+        #ylab="log2miRMA expression",
+        #type="p",
+        #xlim=c(0,16),
+        #ylim=c(0,16),
+        #col=cols,
+        #pch=pchs,
+        #cex=0.8)
+        #fit <- lm(y ~ x)
+        #abline(fit, col="chartreuse3",xlim=c(0,16)) 
+        #} 
+      }
+      #dev.off()  #close pdf file
+      cor.table<-data.frame("miRNA ID"=rep(miRNA.id,lng),
+                            "miRNA"=rep(i,lng),
+                            miRNA.genes.deg,
+                            "Rho"=as.vector(cor.rho),
+                            "pval"=as.vector(cor.pval),
+                            "adj.pval"=p.adjust(cor.pval))
+      cor.table.f<-cor.table[cor.table$pval<0.05,] #just a soft threshold
+      
+      #write.csv2(cor.table.f,
+      #file=file.path(resultsDir,paste(miRNA.id,"csv",sep=".")))
+    }
+  }  
+  return(cor.table.f)
+}    
+
+cor.table.f.returned<-miRNACorrel(res.miRNA=miRNA.res.hsa2,res.mRNA=mRNA.res2,data.miRNA= x_micro_backup,data.mRNA= x_rna_backup,resultsDir=resultsComb)
+cor.table.f.returned
+```
+
+
+**CIRCOS PLOT DEPICTING PREVIOUSLY OBTAINED CORRELATION COEFFICIENTS ALONG WITH FILTERED, TPM-NORMALIZED, LOG-TRANSFORMED mRNA-SEQ COUNTS, miRNA-SEq COUNTS, AND ENCODED GISTIC CNV VALUES FOR SEPARATE OLD AND YOUNG PATIENT GROUPS:**
+```{r correlation3}
+options(stringsAsFactors = FALSE) 
+
+#RECALL FILTERED, NORMALIZED, LOG-TRANSFORMED mRNA-SEQ MATRIXES AND CNV DATAFRAME:
+countsF_TPM_LOG<-log2(countsTPM[,1:10]+2)
+countsF_TPM_LOG_DF<-as.data.frame(countsF_TPM_LOG)
+countsF_TPM_LOG_DF$ID<-countsFInfo_backup$ID
+countsF_TPM_LOG_DF$chr<-countsFInfo_backup$chr
+countsF_TPM_LOG_DF$start<-countsFInfo_backup$start
+countsF_TPM_LOG_DF$end<-countsFInfo_backup$end
+cors.young[is.na(cors.young)] <- 0
+
+#miRNA Expression
+countsF_TPM_LOG_micro<-log2(countsTPM_micro[,1:10]+2)
+countsF_TPM_LOG_DF_micro<-as.data.frame(countsF_TPM_LOG_micro)
+countsF_TPM_LOG_DF_micro$ID<-countsFInfo_micro$ID
+countsF_TPM_LOG_DF_micro$chr<-countsFInfo_micro$chromosome_name
+countsF_TPM_LOG_DF_micro$start<-countsFInfo_micro$start_position
+countsF_TPM_LOG_DF_micro$end<-countsFInfo_micro$end_position
+countsF_TPM_LOG<-log2(countsTPM[,1:10]+2)
+countsF_TPM_LOG_DF<-as.data.frame(countsF_TPM_LOG)
+countsF_TPM_LOG_DF$ID<-countsFInfo_backup$ID
+countsF_TPM_LOG_DF$chr<-countsFInfo_backup$chr
+countsF_TPM_LOG_DF$start<-countsFInfo_backup$start
+countsF_TPM_LOG_DF$end<-countsFInfo_backup$end
+cors.young[is.na(cors.young)] <- 0
+
+range(assays(mRNA_expr)$"exprs")
+table(seqnames(rowRanges(mRNA_expr)))
+rowRanges(mRNA_expr) 
+#Already a GRanges Object (No need to unlist)
+#mRNA_expr.gr<-unlist(rowRanges(mRNA_expr))#from a GRangesList to a GRanges object?  
+range_df<-as.data.frame(rowRanges(mRNA_expr)) 
+range_df$gene_symbol<-rownames(range_df)
+ 
+T.cors.old<-data.frame("chr"=range_df$seqnames,"Start"=as.integer(range_df$start),"End"=as.integer(range_df$end),cors.old,row.names=NULL)
+T.cors.young<-data.frame("chr"=range_df$seqnames,"Start"=as.integer(range_df$start),"End"=as.integer(range_df$end),cors.young,row.names=NULL)
+
+T.CN.old<-data.frame("chr"=countsFInfo_CNV_backup$chr,"Start"=as.integer(countsFInfo_CNV_backup$start),"End"=as.integer(countsFInfo_CNV_backup$end),countsFInfo_CNV_backup[,c(4,6,8,9,11)],row.names=NULL)
+T.CN.young<-data.frame("chr"=countsFInfo_CNV_backup$chr,"Start"=as.integer(countsFInfo_CNV_backup$start),"End"=as.integer(countsFInfo_CNV_backup$end),countsFInfo_CNV_backup[,c(2,3,5,7,10)],row.names=NULL)
+
+T.mRNA.old<-data.frame("chr"=countsF_TPM_LOG_DF$chr,"Start"=as.integer(countsF_TPM_LOG_DF$start),"End"=as.integer(countsF_TPM_LOG_DF$end),countsF_TPM_LOG_DF[,c(3,5,7,8,10)],row.names=NULL)
+T.mRNA.young<-data.frame("chr"=countsF_TPM_LOG_DF$chr,"Start"=as.integer(countsF_TPM_LOG_DF$start),"End"=as.integer(countsF_TPM_LOG_DF$end),countsF_TPM_LOG_DF[,c(1,2,4,6,9)],row.names=NULL)
+T.miRNA.old<-data.frame("chr"=countsF_TPM_LOG_DF_micro$chr,"Start"=as.integer(countsF_TPM_LOG_DF_micro$start),"End"=as.integer(countsF_TPM_LOG_DF_micro$end),countsF_TPM_LOG_DF_micro[,c(3,5,7,8,10)],row.names=NULL)
+T.miRNA.young<-data.frame("chr"=countsF_TPM_LOG_DF_micro$chr,"Start"=as.integer(countsF_TPM_LOG_DF_micro$start),"End"=as.integer(countsF_TPM_LOG_DF_micro$end),countsF_TPM_LOG_DF_micro[,c(1,2,4,6,9)],row.names=NULL)
+T_labels<-data.frame("chr"=range_df$seqnames,"Start"=as.integer(range_df$start),"End"=as.integer(range_df$end),range_df$gene_symbol,row.names=NULL)
+
+#Plot of FILTERED, TPM-NORMALIZED, LOG-TRANSFORMED DATA VIA Circos FOR EACH OF THE TWO YOUNG AND OLD PATIENT GROUPS COMBINED PATIENTS  
+colors <- rainbow(10, alpha=0.5)
+par(mar=c(2, 2, 2, 2))
+plot(c(1,800), c(1,800), type="n", axes=FALSE, xlab="", ylab="", main="")
+circos(R=300, cir="hg19", W=4, type="chr", print.chr.lab=TRUE, scale=TRUE)
+circos(R=260, cir="hg19", W=40, mapping=T.miRNA.young,col.v=4,type="heatmap2", cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue")
+circos(R=220, cir="hg19", W=40, mapping=T.miRNA.old,col.v=4,type="heatmap2", cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue")
+circos(R=180, cir="hg19", W=40, mapping=T.mRNA.young,col.v=4,type="heatmap2", cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue")
+circos(R=140, cir="hg19", W=40, mapping=T.mRNA.old,col.v=4,type="heatmap2", cluster=TRUE, col.bar=TRUE, lwd=0.1, col="blue")
+circos(R=120, cir="hg19", W=20,  mapping=T.CN.young,   col.v=4,   type="ml3", B=FALSE, lwd=1, cutoff=0)
+circos(R=100, cir="hg19", W=20,  mapping=T.CN.old,   col.v=4,   type="ml3", B=FALSE, lwd=1, cutoff=0)
+circos(R=80, cir="hg19", W=20,  mapping=T.cors.young,  col.v=4, type="s",   B=TRUE, lwd=1, col=colors[1])
+circos(R=60, cir="hg19", W=20,  mapping=T.cors.old,  col.v=4, type="s",   B=TRUE, lwd=1, col=colors[1])
+#Adding labels for the genes
+circos(R=310, cir="hg19", W=20, mapping=T_labels, type="label", side="out", col=c("black", "blue","red"), cex=0.4)
+```
+
+
+
+**MULTI-FACTOR ANALYSIS (MFA)**
+```{r correlation4}
+##########################################GLOBAL MFA ON RAW CNV, mRNA-Seq, miRNA-Seq DATA####################################
+cond<-as.factor(colData(miniACC.assays.comp.age)$years_to_birth)
+dat4Facto<-data.frame(cond=cond,t(mACC.exp.c3),t(mACC.CN.c3),t(mACC.mir.c3)) 
+rownames(dat4Facto) <- gsub("TCGA-","",rownames(cd3))
+ 
+#We will consider CN as scaled but it would be better to consider it as categorical
+res = MFA(dat4Facto, group=c(1,exp.l3,cn.l3,mir.l3), type=c("n","c","s","c"), ncp=5, name.group=c("cond","mRNA","CNV","miRNA"),num.group.sup=c(1)) 
+
+#Extra informative plots
+plot(res,choix="ind",habillage = "cond")
+plotellipses(res, keepvar = "cond")
+
+#There seems to be a clear separation between  old and young patients.
+#Patient sample OR-A5L5 and OR-A5LC appear to be an outlier and will be replaced with a different aged patient
+
+########################################GLOBAL MFA ON FILTERED, NORMALIZED, LOG-TRANSFORMED CNV, mRNA-Seq, miRNA-Seq DATA#########################
+mRNAexp.l<-nrow(countsF_TPM_LOG_DF_MFA)
+cnv.l<-nrow(countsFInfo_CNV_backup_MFA)
+miRNAexp.l<-nrow(countsF_TPM_LOG_DF_micro_MFA)
+
+dat4Facto2<-data.frame(cond=as.factor(cond2),countsF_TPM_LOG_DF_MFA.t,countsFInfo_CNV_backup_MFA.t,countsF_TPM_LOG_DF_micro_MFA.t) 
+dim(dat4Facto2)
+#We will consider CN as scaled but it would be better to consider it as categorical
+es2 = MFA(dat4Facto2, group=c(1,mRNAexp.l,cnv.l,miRNAexp.l), type=c("n","c","s","c"), ncp=5,name.group=c("cond2","mRNAexp","cnv","miRNAexp"),num.group.sup=c(1)) 
+
+top10.1 <- sort(es2$global.pca$var$cor[,"Dim.1"],decreasing=TRUE)[1:10]
+top10.1
+top10.2 <- sort(es2$global.pca$var$cor[,"Dim.2"],decreasing=TRUE)[1:10]
+top10.2
+top10.3 <- sort(es2$global.pca$var$cor[,"Dim.3"],decreasing=TRUE)[1:10]
+top10.3
+
+#Extra informative plots
+plot(es2,choix="ind",habillage = "cond")
+plotellipses(es2, keepvar = "cond")
+
+fviz_mfa_ind(es2, label = "var", habillage = cond2, addEllipses = TRUE, ellipse.level = 0.95) 
+fviz_contrib(es2, choice = "quanti.var", axes = 1)
+
+summary(es2)
+#Overall, MFA helps understand the underlying structure of the data by reducing its dimensionality and highlighting the relationships between variables and observations.
+#Based on MFA summary eigenvalues, the first three dimensions of MFA capture 57.77% (24.66% (dim1)+18.85% (dim2) + 14.268 (dim3)) of total variance.
+#Based on MFA summary group analysis, compared to GISTIC cnv recurrent lesions, the miRNA-seq and mRNA-seq variables 
+#co-contribute most and have highest significant impact to the first dimension, while GISTIC cnv contributes the most towards 
+#dimension#2 (0.9 vs. 0.009). The top genes impacting dimension#1 are (from mRNA-seq data block variable)
+#SMAD1,SRC, PIK3R1, PRKAA1, AKT3, NFKB1, MAPK9, AKT1, PRKCA. and SQSTM1. 
+#The top genes impacting dimension#2(from GISTIC CNV gene-based recurrent lesions data block variable) are SRC,
+#TGM2,  E2F1, NCOA3, BCL2L1, PRKAA1, YWHAB, PREX1, CDKN1B, and ERBB3. The top genes impacting dimension#3(from miRNA-seq data block variable)
+#are hsa.mir.196a.2,hsa.mir.106b, hsa.mir.196a.1, hsa.mir.25, hsa.mir.16.2, hsa.mir.196b, hsa.mir.92a.2, 
+#and (from mRNA-seq data block)CDK1, FOXM1,and ACACB.  
+#Based on MFA analysis, there is clear separation between cnv, mRNA, and miRNA block data
+#Based on individuals Analysis examining how individual data points relate to each dimension,
+#the first ten individuals show their positions in the multidimensional space.No clear segregation between young and old patient samples is apparent. Of the ten selected patient samples,
+#A5J9 (young), A5JF(old),A5JI(young),A5K0(old),A5L5(old),A5LL(old) contribute positive coefficients towards dimension#1, while
+#A5JE (young), A5KV(young),A5LC(old),A5LE(young) contribute negative coefficients towards dimension#1
+#Young Patients TCGA.OR.A5LE, A5J9, A5JE appear to be outliers. Old patients A5K0, A5LL, A5JF, and A5LC appear to be outliers, suggesting that the
+#10 patients selected were not appropriate. The mRNA expression dimension seem  to coincide with the age.status condition 
+#more than the other 2 data blocks.#Based on MFA continuous Variables analysis, which indicates the relationship between the original variables,
+#and the extracted dimensions, the mRNA-seq data block genes strongly influence Dimension 1 compared to miRNA-seq and GISTIC CNV data block variables.
+```
+

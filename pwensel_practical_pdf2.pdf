@@ -1,0 +1,538 @@
+---
+title: "pwensel_practical"
+author: "Pierre Wensel"
+date: "`r Sys.Date()`"
+output: html_document
+---
+#Student Name: Pierre Wensel
+#School/Program: U.Vic M.S. Omics Data Analysis
+# Course: Metagenomics
+#Assignment: Practical
+#Date: December 28. 2023
+
+## R Markdown
+This is an R Markdown document. 
+Mock evaluation Application Metagenomics | Master in Omics Data Analysis – UVic 
+
+For the metagenomics course, evaluation will be based on a practical work. The practical 
+work will consist of the analysis of a phyloseq object adapting R/Bioconductor functions 
+and code that we have seen in the hands-on sessions during the classes. 
+The provided dataset was obtained from Illumina/MiSeq sequencing (V3-V4 region 
+within 16S rRNA gene) of fecal samples and intestinal content (rectum and small 
+intestine)from mice (female and male) receiving treatment or treatment+antibiotics. The 
+goal of this microbiome analysis is to understand to what extend antibiotics may alter the 
+gut microbiota during treatment.
+
+See the following papers for a review of the impact of antibiotics on the gut microbiome. 
+- Mouse Microbiota Models: Comparing Germ-Free Mice and Antibiotics 
+Treatment as Tools for Modifying Gut Bacteria. 2018; Front. Physiol. 9:1534. 
+doi: 10.3389/fphys.2018.01534.
+- Recovery of the Gut Microbiota after Antibiotics Depends on Host Diet, 
+Community Context, and Environmental Reservoirs. 2019; Cell Host & 
+Microbe. Vol. 26 (5), 650-665.e4.https://doi.org/10.1016/j.chom.2019.10.011.
+- Effects of Antibiotics on the Intestinal Microbiota of Mice. 2020. Antibiotics, 9(4), 191. https://doi.org/10.3390/antibiotics9040191.
+The given phyloseq object (ps_fin.RData) consists of four data classes obtained from the 
+DADA2 pipeline:
+-Abundance table (otu_table): abundance data (counts) of each ASV obtained for 
+each sample
+-Taxonomy table (tax_table): taxonomical classification of each ASV 
+-Metadata (sam_data): list of variables for each sample concerning the mouse cage 
+(CageID), sex (Sex), treatment group (Group) and site of sampling (SampleType)
+-Phylogenetic tree (phy_tree): formatted tree with phylogenetic relationship of all 
+ASVs
+Additional information:
+- Low abundant ASVs were removed from the dataset (no further filtering step 
+required).
+- Data transformation (i.e. normalization from counts to percentage or rarefaction) 
+required prior performing specific analyses.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#Already installed via install.packages("phyloseq","ggplot2","vegan","dplyr","plyr","data.table","ggpubr","RColo#rBrewer") or #BiocManager::install("ggpubr")
+#rm(list=ls()) 
+
+library(phyloseq)
+library(ggplot2)
+library(vegan)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(ggpubr)
+library(RColorBrewer)
+
+```
+
+
+#Set Working directory to the root directory where I have  data code and loading .Rdata file:
+```{r, echo=TRUE}
+# Set Working directory to the root directory where I have  data code
+getwd()
+
+code_path<-("C:/Users/click/OneDrive/Desktop/Intro-to-R2")
+  setwd(code_path)
+
+# Set directory to RData and metadata (Allsamples)
+  AllSamplesPath <- paste(code_path,"/pwensel_practical/",sep="")
+  
+  RData<-load(paste0(AllSamplesPath,"ps_mock_day3.RData"))
+  
+```
+
+#Components of a phyloseq object, like the OTU Table, can be accessed by special accessor functions, or “accessors'', 
+#which return specific information about phylogenetic sequencing data, if present. These accessor functions are available 
+#for direct interaction by users and dependent functions/packages.
+```{r, echo=TRUE}
+#Examining the ps_fin phyloseq object that I loaded in with various functions before using this for data #analysis:
+#Inspect the phyloseq object and metadata
+View(ps_fin)
+summary(ps_fin)
+ps_fin
+ps_fin@sam_data
+ntaxa(ps_fin)
+nsamples(ps_fin)
+sample_names(ps_fin)[1:15]
+
+#This confirms that taxa_are_rows = FALSE because taxa are columns.
+otu_table(ps_fin)[1:5, 1:5]
+tax_table(ps_fin)[1:5, 1:4]
+phy_tree(ps_fin)
+ps_fin@otu_table
+taxa_names(ps_fin)[1:10]
+sample_variables(ps_fin)
+head(sample_data(ps_fin))
+table(sample_data(ps_fin)$Group)
+
+# The following generated an error: Error in access(physeq, "refseq", errorIfNULL) : refseq slot is empty.
+#refseq(ps_fin)
+#The following shows that class(sam_data) is a function class, not dataframe as expected
+class(sam_data)
+
+# Get reads per sample, sort and plot
+sample_sums(ps_fin)
+sort(sample_sums(ps_fin))
+  hist(sample_sums(ps_fin), main="Histogram: Read Counts", xlab="Total Reads", 
+     border="blue", col="mediumseagreen", las=1, breaks=12)
+
+# Show available ranks in the dataset
+  rank_names(ps_fin)
+  table(tax_table(ps_fin)[, "Kingdom"], exclude = NULL)
+  
+#Evidently, based on output, there were only Bacteria and N/A kingdoms (no Eukaryota kingdom)
+#Results:
+#Bacteria     <NA> 
+#4544       13
+
+```
+
+#Confirming rownames:
+```{r, echo=TRUE}
+#sam_data metadata rownames must match sample names in dada2 outputs
+#The boolean value should be TRUE
+identical(rownames(otu_table),rownames(sam_data)) 
+#Based on value=TRUE, rownames are confirmed to be consistent and identical
+
+```
+
+# It is more convenient to use short names for our ASVs (e.g. ASV21) rather than the full DNA sequence when working with some 
+# of the tables and visualizations from phyloseq, but we want to keep the full DNA sequences for other purposes like merging 
+# with other datasets or indexing into reference databases like the Earth Microbiome Project. For that reason we can store the
+# DNA sequences of our ASVs in the refseq slot of the phyloseq object, and then rename our taxa to a short string. 
+# That way, the short new taxa names will appear in tables and plots, and we can still recover the DNA sequences 
+# corresponding to each ASV as needed with refseq(ps). Note: This code generated errors and was omitted
+#dna <- Biostrings::DNAStringSet(taxa_names(ps_fin))
+#names(dna) <- taxa_names(ps_fin)
+#ps_fin <- merge_phyloseq(ps_fin, dna)
+#taxa_names(ps_fin) <- paste0("ASV", seq(ntaxa(ps_fin)))
+
+#Row orientation consistence between otu_table and tax_table:
+```{r, echo=TRUE}
+#It was my understanding that the taxa-are_rows status for otu_table and tax_table must be the same:
+taxa_are_rows(tax_table)
+taxa_are_rows(otu_table)
+#Therefore, I originally worked to re-orient 
+#Puts the phyloseq or otu-table object x in the orientation (taxa as rows or as columns) specified 
+# This is useful when passing the otu table on to functions that require the abundance matrix
+#to have a specific orientation and are unaware of the taxa_are_rows(x) property. However, this code generated #errors and was not executed
+#install.packages("mikemc")
+#install.packages("speedyseq")
+#library(mikemc)
+#library(speedyseq)
+#x <- tax_table %>% orient_taxa(as = "columns")
+#taxa_are_rows(x) 
+
+```
+
+
+
+# Taxonomic filtering
+```{r, echo=TRUE}
+# Taxonomic filtering
+
+# Convert counts to relative abundances for normalization ("transform_sample_counts" function)
+  ps_RA <- transform_sample_counts(ps_fin, function(x) x/sum(x))
+
+# Agglomerate taxa to the "Kingdom" taxonomic rank in a new phyloseq object ("tax_glom" function)
+  k <- tax_glom(ps_RA, taxrank="Kingdom",NArm = FALSE)
+
+# Convert in dataframe to facilitate plotting with ggplot2
+  k_melt<-psmelt(k)
+
+# Plot composition at the Kingdom level
+  ggplot(k_melt, aes(x=SampleID,y=Abundance*100)) + 
+    geom_bar(aes(fill=Kingdom), stat="identity", position="stack")+
+    ylab("Relative abundance")+
+    facet_wrap(~Group, scales="free_x")+xlab("")+
+    theme_bw()+theme(axis.text.x = element_text(angle=45,hjust=1))
+
+# Exclude ASVs corresponding to Eukaryota (even though none were detected)
+  table(tax_table(ps_fin)[, "Kingdom"], exclude = NULL)
+  ps_fin <- subset_taxa(ps_fin, !Kingdom %in% c("", "Eukaryota"))
+  table(tax_table(ps_fin)[, "Kingdom"], exclude = NULL)
+#Results:
+#Bacteria     <NA> 
+#4544       13
+  
+
+```
+
+
+
+#QUESTION#1:Create a stacked sample barplot for the each SampleType to illustrate bacterial order distribution (plot only top 10 most abundant orders) across samples (Treat and Treat+ATB) and identify which order is dominant in each of the two groups (Treat and Treat+ATB)
+```{r, echo=TRUE}
+# profile microbial composition in CNT at genus level ##
+
+# Agglomerate taxa to the "Order" level to profile composition at low taxonomic rank
+# from ps_RA (normalized counts) and generate a new phyloseq object (g)
+  g<- tax_glom(ps_RA, taxrank="Order",NArm = TRUE)
+
+# Select 10 most abundant orders to facilitate visualization
+  top10OTU_names <- names(sort(taxa_sums(g), decreasing=TRUE)[1:10])
+
+# Subset the 10 most abundant genera in the phyloseq object named "g"
+  ps_top10 <- prune_taxa(top10OTU_names, g)
+  g_melt<-psmelt(ps_top10)
+
+# Get 10 distinct colors. Alternatively I can use R palette
+  custom_col10 = c("salmon","#D55E00","khaki4","#009E73","cyan3","cyan","mediumorchid","hotpink1","gray", "red")
+                   
+# Plot composition at the Order level
+  ggplot(g_melt,aes(x=SampleID,y=Abundance*100,fill=Order))+ 
+    geom_bar(aes(fill=Order), stat="identity", position="stack")+theme_bw()+
+    theme(text = element_text(size=12))+
+    scale_fill_manual(values=c(custom_col10))+
+    facet_wrap(SampleType ~ Group, scales="free_x")+
+    theme(axis.text.x = element_text(angle=45,hjust=1))+
+    ylab("Relative abundance")+xlab("")
+
+#Based on previous plot results, it is evident that order Bacteroidales  has highest relative abundance #withing group Treat across all 3 SampleTypes (faeces, small, rectum). The order Rickettsiales has #highest relative abundance for Group Treat+ATB across  SampleType. For Treat+ATB groups, there is for #some samples a high relative abundance of Erysipelotrichales across all SampleTypes.
+  
+```
+
+
+#Determination of appropriate filtering steps:
+```{r, echo=TRUE}
+#Based on the following output, no non-template PCR negative control (C-CPR) samples are part of the data set.
+  ps_fin@sam_data[["Group"]]  
+# In addition, I do not have access to the seqtab.nochim.bkp underlying the otu_table. Therefore, the 
+#following code will be avoided and No CNT-associated ASVs were bioinformatically subtracted from the full datasets.
+  
+# # Remove ASVs associated to the non-template PCR negative control (C-PCR)
+#   df_otu<-data.frame(ps_fin@otu_table,check.names=FALSE)
+#   rownames(df_otu)
+#   dim(df_otu)
+#   cnt_otu<-df_otu[, df_otu[14, ] >0]
+#   dim(cnt_otu)
+#   df_otu_noCNT<-df_otu[!names(df_otu) %in% names(cnt_otu)]
+#   dim(df_otu_noCNT)
+#   rownames(df_otu_noCNT)
+#   rownames(seqtab.nochim.bkp)
+
+# # Create a clean phyloseq object (after eukaryotic and CNT-associated ASVs removal)
+#   ps_clean <- phyloseq(otu_table(df_otu_noCNT, taxa_are_rows=FALSE), 
+#                      sample_data(metadata), 
+#                      tax_table(taxa.silva.bkp),treeSilva)
+# 
+# # Remove CNT sample from the dataset using "subset_samples" function
+#   ps_clean<-subset_samples(ps_clean, Group!="CNT")
+
+#Also, low abundant ASVs were removed from the dataset (no further filtering step required).
+#Therefore, the following steps are avoided:
+  
+# # remove low abundant taxa from the clean phyloseq object#
+#   ps_clean <- filter_taxa(ps_clean, function (x) {sum(x > 0) > 1}, prune=TRUE)
+#   ps
+#   ps_clean
+
+
+```
+
+
+#Further examination and Removing any eukaryotic kingdom reads even if none were counted:
+```{r, echo=TRUE}
+# Save the clean(after eukaryotic removal) phyloseq Object for following data analysis 
+  saveRDS(ps_fin, paste0(AllSamplesPath, file = "ps_clean.rds"))
+# Get sorted reads per sample after the Eukaryotic (no C-NC or low abundance) filtering step
+  sort(sample_sums(ps_fin))
+# Examining the ASV table (by default called otu_table in phyloseq)
+  ntaxa(ps_fin)
+#Result: [1] 4557
+#Therefore, after filtering out eukaryotic sequences (there were none), contaminant reads and low abundant ASVs à Total 4557 ASVs
+  
+# Examining the taxonomy table (number of features for each phyla)
+table(tax_table(ps_fin)[, "Phylum"], exclude = NULL)
+#Evidently, the biggest phylum representation is with  Bacteroidota (1700) and  Firmicutes (1969), and Proteobacteria (430)
+```
+
+#Code for generating rarefaction curve that was executed successfully but not used for answering Questions#1-5
+```{r, echo=TRUE}
+# # Plot the rarefaction curves using vegan function "rarecurve" (this may take few minutes)
+# data("ps_fin")
+# tab <- otu_table(ps_fin)
+# class(tab) <- "matrix" # as.matrix() will do nothing
+# ## I get a warning here, but this is what I need to have
+# tab <- t(tab) # transpose observations to rows
+# rare <- rarecurve(tab, step=50, cex=0.5, lwd=2, ylab="OTU",  label=F)
+# 
+# # The Rarefaction curve plot shows the number of ASVs as a function of the read number; Most of the curves #(curve=sample) 
+# #reach asymptote at a sequencing depth of 1000 reads, where most taxonomic tags are captured. Evidently, there #are 2 divisions
+# #comprised of large sample sizes.
+```
+
+
+# Data transformation
+```{r, echo=TRUE}
+# Data transformation (i.e. normalization from counts to percentage or rarefaction) required prior performing #specific analyses. 
+# Convert counts to relative abundances in the clean phyloseq object
+  ps_RA <- transform_sample_counts(ps_fin, function(x) x/sum(x))
+
+```
+
+# Check composition at the phylum level
+```{r, echo=TRUE}
+# Check composition at the phylum level (use normalized counts --> ps_RA)
+  p <- tax_glom(ps_RA, taxrank="Phylum",NArm = FALSE)
+  p_melt<-psmelt(p)
+  ggplot(p_melt, aes(x=SampleID,y=Abundance*100)) + 
+    geom_bar(aes(fill=Phylum), stat="identity", position="stack")+
+    ylab("Relative abundance")+
+    facet_wrap(~Group, scales="free_x")+xlab("")+
+    theme_bw()+theme(axis.text.x = element_text(angle=45,hjust=1))
+
+#Based on the previous compositional analysis plot, Bacteroidetes and Firmicutes were significantly higher in #TREAT, whereasProteobacteria and N/A (unidentified) showed higher abundance in TREAT+ATB
+
+```
+
+#QUESTION#2: Create boxplots or violin plots to identify which bacterial phyla are enriched (significantly more abundant) in the group ‘Treat’ compared to ‘Treat+ATB’ in the sampletype ‘faeces’. Please, provide or plot corresponding p-values.
+```{r, echo=TRUE}
+# Assess if differences in phyla abundances between Treat and Treat+ATB are statistically significant and plot
+#Because the dataset involves un-paired dataset (i.e. samples were taken from separate male and female 
+#individuals (mice subjects) undergoing treatment and treatment+Antibiotic), paired=FALSE.
+#Unpaired test (paired = FALSE) is to compare the mean of two independent groups, such as Group of samples from 
+#different subjects (females vs males, treated vs non-treated) 
+compare_means(Abundance ~ Group, data = p_melt,paired = FALSE,group.by = "Phylum")
+
+#Based on previous Wilcoxon test results, the p-values for Proteobacteria,Bacteroidota,Firmicutes,Actinobacteriota,
+#Cyanobacteria,Desulfobacterota,Patescibacteria were all p<=0.05, suggesting statistically significant differences 
+#in phyla abundances between Treat and Treat+ATB. However, the high p-value of p=0.305>0.05 suggests that
+#no statistically significant difference in abundance of Thermotogota was observed between Treat and Treat+ATB
+
+#Plotting for all samples:
+  ggplot(p_melt, aes(x=Group, y=Abundance*100)) +
+    geom_boxplot(aes(fill=Group),alpha=0.7)+
+    geom_point()+
+    scale_fill_manual(values=c("cornflowerblue","darkgoldenrod1"))+
+    theme_bw()+ylab("Relative abundance")+
+    facet_wrap( ~ Phylum, scales="free_x")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=rel(1)))+
+    stat_compare_means(paired=FALSE,label.y = 75,size=3)
+ 
+#Based on the previous plot and associated p-values for each Phylum, 
+#evidently the bacterial phyla groups (Bacteroidota, Firmicutes, Actinobacteriota,Desulfobacterota) are enriched (statistically significantly more abundant) 
+#in the group ‘Treat’ compared to ‘Treat+ATB’ in all samples. Also, the bacterial phyla groups 
+#(Proteobacteria, N/A (unidentified) Cyanobacteria, and less so Patescibacteria are enriched (statistically significantly more abundant) 
+#in the group ‘Treat+ATB’ compared to ‘Treat’ in all samples.
+  
+#Checking differences in sub-classes within phylum Bacteroidota 
+#(one of the most significantly different based on very low p-value=6.5E-12<0.05):
+# Subset phylum Bacteroidota 
+#  Bacter_p<-p_melt[p_melt$Phylum == "Bacteroidota ", ]
+# Remove NA
+#  Bacter_p <- na.omit(Bacter_p)   
+
+#Plotting for differences in Phylum abundances among two groups within SampleType="faeces"" 
+#Removing NA
+  p_melt_p <- na.omit(p_melt) 
+
+# Compare SampleType="faeces" within each group Treat/Treat+ATB 
+  ggplot(p_melt_p, aes(x=SampleType, y=Abundance*100)) +
+    geom_boxplot(aes(fill=SampleType),alpha=0.7)+
+    geom_point()+
+    scale_fill_manual(values=c("peachpuff","indianred4", "red"))+
+    theme_bw()+ylab("Relative abundance")+
+    facet_wrap( ~ Group, scales="free_x")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=rel(1)))+
+    stat_compare_means(paired = FALSE)
+  
+#Based on previous high Kruskal_Wallis test p-values (p-value=0.91, 0.81> 0.05), there do not appear to be statistically significant differences
+#in relative abundance among SampleType within each group Treat/Treat+ATB
+
+#Plotting for within SampleType="faeces. Compare within SampleType="faeces" (RE_CHECK HERE)
+  ggplot(p_melt_p, aes(x=Group, y=Abundance*100)) +
+    geom_boxplot(aes(fill=Group),alpha=0.7)+
+    geom_point()+
+    scale_fill_manual(values=c("cornflowerblue","darkgoldenrod1"))+
+    theme_bw()+ylab("Relative abundance")+
+    facet_wrap( ~ SampleType, scales="free_x")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=rel(1)))+
+    stat_compare_means(paired = TRUE)
+  
+
+#Checking differences in sub-classes within SampleType="faeces"
+# Subset SampleType="faeces"
+f_p<-p_melt_p[p_melt_p$SampleType == "faeces", ]
+
+#ANSWER TO QUESTION#2:
+#Creating boxplots to identify which bacterial phyla are enriched (significantly more abundant) in the group ‘Treat’ compared to ‘Treat+ATB’ in the sampletype ‘faeces’
+#Plotting to compare phylum enriched among Groups within SampleType="faeces". 
+  ggplot(f_p, aes(x=Group, y=Abundance*100)) +
+    geom_boxplot(aes(fill=Group),alpha=0.7)+
+    geom_point()+
+    scale_fill_manual(values=c("cornflowerblue","darkgoldenrod1"))+
+    theme_bw()+ylab("Relative abundance")+
+    facet_wrap( ~ SampleType, scales="free_x")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=rel(1)))+
+    stat_compare_means(paired = TRUE)
+
+#Based on previous plot and low Wicoxon p-value of p=6.8E-6<0.05, there is a statistically significant difference in OVERALL enrichment in group Treat compared
+#to Treat+ATB
+  
+# Check composition at the genus level (top 25)
+# Check how many genera are present
+  length(get_taxa_unique(ps_RA, taxonomic.rank = "Genus"))
+# Agglomerate taxa to the "Genus" level   
+  g<- tax_glom(ps_RA, taxrank="Genus",NArm = TRUE)
+# Select 25 most abundant genera to facilitate visualization
+  top25OTU_names <- names(sort(taxa_sums(g), decreasing=TRUE)[1:25])
+  ps_top25 <- prune_taxa(top25OTU_names, g)
+  g_melt<-psmelt(ps_top25)
+  custom_col25 = c("cyan","#332288","salmon","lightslateblue","navy",
+                   "peachpuff2","#44AA99","pink3","cyan3","khaki4","khaki",
+                   "blue","lightyellow","mediumseagreen","mediumorchid","gray",
+                   "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", 
+                   "indianred1", "indianred3","red","hotpink1")
+  
+  ggplot(g_melt,aes(x=SampleID,y=Abundance*100,fill=Genus))+ 
+    geom_bar(aes(fill=Genus), stat="identity", position="stack")+theme_bw()+
+    theme(text = element_text(size=12))+
+    scale_fill_manual(values=c(custom_col25))+
+    facet_wrap( ~ Group, scales="free_x")+
+    theme(axis.text.x = element_text(angle=45,hjust=1))+
+    ylab("Relative abundance")+xlab("")
+  
+#Based on previous output, the most abundant genus is Eubacterium siraeum group, followed by Eubacterium xylanophilum group
+
+# Calculate mean genera within FF and FFPE  
+  aggregate( Abundance*100 ~ Genus+Group, g_melt, mean )
+  
+#Based on previous results, Group Treat is enriched with Lachnospiraceae NK4A136 and Bifidobacterium genus groups (mean~6),
+#while Group Treat+ATB is enriched with Escherichia-Shigella genus groups (mean~9.95)
+  
+#We can also subset specific taxa 
+#ps_bacteroides <- subset_taxa(ps_RA, Genus == "Bacteroides")
+
+```
+
+
+#QUESTION#3:Create boxplots or violin plots to show which group (Treat or Treat+ATB) shows the highest #alpha diversity (Shannon index) across each SampleType. Please, provide or plot corresponding p-values
+```{r, echo=TRUE}
+#QUESTION#3  
+
+### Diversity ###
+# Alpha diversity 
+
+# Rarefy at the minimum sample depth in the dataset
+  ps.rarefied = rarefy_even_depth(ps_fin, rngseed=1, 
+                sample.size=min(sample_sums(ps_fin)), replace=F)
+  sample_sums(ps.rarefied)
+  
+#Based on previous output, 8840 reads per samples were obtained via rarefaction
+  
+  
+# Estimate richness using estimate_richness function
+  alpha<-as.data.frame(estimate_richness(ps.rarefied))
+  alpha
+
+# Merge alpha-diversity table and metadata from ps_clean object
+  rownames(alpha)
+  rownames(ps_fin@sam_data)
+  rownames(alpha)<-rownames(ps_fin@sam_data)
+  alpha_meta<-merge(alpha,ps_fin@sam_data,by="row.names")
+  
+# Plotting Chao1 index, using paired=FALSE (unpaired female vs. male individuals) setting:
+  ggplot(alpha_meta, aes(x=Group, y=Shannon,fill=Group)) +
+    geom_boxplot(aes(fill=Group),width=0.3,alpha=0.8) +
+    scale_fill_manual(values=c("cornflowerblue","darkgoldenrod1"))+
+    geom_point(colour="gray42", size=2, alpha=0.7) +
+    theme_light()+ theme(legend.position="none")+xlab("")+
+    geom_line(aes(group=SampleID), colour="gray42", linetype="11") +
+    stat_compare_means(paired=FALSE,label.x = 1.40)
+
+#Based on previous Shannon index plot results, there is significant differences 
+#in alpha diversity between groups Treat and Treat+ATB based on Wilcoxon p-value=2.2E-16<0.05.
+#The Shannon diversity index is higher for Treat compared to Treat+ATB. Note: There may be 
+#correction needed for this as geom_line method apparently should be used for paired=TRUE. 
+
+#Now creating boxplots to show which group (Treat or Treat+ATB) shows the highest alpha diversity 
+#(Shannon Index) across each SampleType.Also comparing other alpha-diversity 
+#measures listed in dataframe “alpha” (Simpson index)
+#Now comparing other alpha-diversity measures listed in dataframe “alpha” (Simpson, inv.Simpson…):
+plot_richness(ps_fin, x="SampleType", measures=c("Shannon", "Simpson"), color="Group")
+
+#Based on previous plot, visually there appears to be greater Simpson index alpha diversity 
+#(compared to Shannon index) in group Treat relative to group Treat+ATP across all SampleType=faeces, rectum, small.
+
+```
+
+#QUESTION#4: Run ordination analysis using PCoA/Bray-Curtis distances on the dataset and Group and #SampleType as color and shape, respectivel
+```{r, echo=TRUE}
+
+# Beta diversity -- Bray Curtis PCoA 
+# Performing PCoA ordination analysis on Bray-Curtis distances 
+bray_pcoa <- ordinate(physeq = ps_RA,method = "PCoA", distance = "bray")
+
+#Running ordination analysis using PCoA/Bray-Curtis distances on the dataset and Group and SampleType as color
+#and shape, respectively:
+#bray_pcoa <- ordinate(physeq = ps_RA,method = "PCoA", distance = "bray")
+plot_ordination(physeq = ps_RA, ordination = bray_pcoa,
+                  color = "Group", shape = "SampleType") + 
+    scale_color_manual(values = c("peachpuff","indianred4")) +
+    scale_shape_manual(values=c(14,19, 24))+
+    geom_point(size = 5)+
+    theme_bw()
+  
+#Based on the previous beta-diversity plot, PCoA show that samples significantly clustered (p-value < 0.05) 
+#by factors “Group”(Treatmentvs. Treatment+Antibiotic) and “SampleType” based on Bray-Curtis
+#distances = taxa abundance). This result suggests that the microbiome composition of Treat vs. Treat +ATB as well as Faeces, small, rectuem-type samples as
+#are different.Note: I could have also assessed other beta-diversity distance metrics(Unifrac, Jaccard…)
+
+```
+
+
+#QUESTION#5:Using PERMANOVA test (adonis function on Bray-curtis distances, package::vegan), explain #which of the explanatory variables (SampleType or Group) has a strongest link (lowest p-value) with #microbiome structure
+```{r, echo=TRUE}
+# Estimate statistical differences using PERMANOVA
+  perma_bray <- phyloseq::distance(ps_RA, method = "bray")
+  sampledf <- data.frame(sample_data(ps_RA))
+  adonis(perma_bray ~ Group, data = sampledf,paired=FALSE)
+  adonis(perma_bray ~ SampleType, data = sampledf,paired=FALSE)
+  
+#Treat and Treat=ATB is different.  
+  
+#Using PERMANOVA test (adonis function on Bray-curtis distances, package::vegan)with paired=FALSE for independent unpaired #male/female 
+#individuals receiving various treatments, the explanatory variables (SampleType) 
+#has a strongest link (lowest p-value) with microbiome structure compared to Group: 
+#This result suggests that the microbiome composition of various SampleTypes=faeces, rectum, and small are different
+
+```
+
+#Please diregard answer to question #2, as I mistakenly included all anwers to Questions#1-5

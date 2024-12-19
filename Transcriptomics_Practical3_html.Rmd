@@ -1,0 +1,787 @@
+---
+title: "Transcriptomics_Practical2_html" 
+author: "Pierre Wensel"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+
+#%B %Y: September 2022
+#%d/%m/%y: 09/09/22
+#%a/%d/%b: Fri 09 Sep
+
+
+output:
+ html_document:
+    highlight: default
+    number_sections: yes 
+    theme: readable 
+    toc: yes 
+    toc_depth: 2
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:/Users/click/OneDrive/Desktop/MY_R_DIRECTORY")
+library(affydata)
+library(S4Vectors)
+library(IRanges)
+library(GenomicRanges)
+library(SummarizedExperiment)
+library(TxDb.Dmelanogaster.UCSC.dm3.ensGene)
+library(airway)
+library(biomaRt)
+library(GEOquery)
+library(readr)
+library(tidyverse)
+library(ggrepel)
+library(ggfortify) 
+library()
+#For PCA
+library(pheatmap)
+#For DEA
+library(limma)
+library(edgeR)
+library(DESeq2)
+library(sva)
+#Needed from Gihub repository for SVCD Normalization performed in GSE Study:
+library(cdnormbio)
+
+```
+PART 1: Describe the objective of the GEO project, the array and the design of the experiment
+
+
+
+This practical is centered on the GEO data set generated and graciously shared and reposited by authors
+of the following publication:
+
+Yun JH, Pierrelée M, Cho DH, Kim U, Heo J, Choi DY, et al. Transcriptomic analysis of Chlorella sp. HS2 suggests the overfow of acetyl-CoA and 
+NADPH cofactor induces high lipid accumulation and halotolerance. Food Energy Secur. 2020. https://doi.org/10.1002/fes3.267
+
+The objective of the GEO project is to better understand acclimation responses of 
+a halotolerant, eukaryotic, photosynthetic microalgae Chlorealla sp. HS2 (recently isolated from a local 
+tidal rock pool) under high salinity stress. For this, Illumina RNASeq transcriptome analysis was performed on triplicated algal culture samples 
+grown in freshwater (control) and marine (case) conditions (2 conditions) and examined over time at both exponential
+and stationary growth phases.There were 12 samples in this study:
+[2 treatments (control and marine) x 2 harvest times(exponential phase and stationary phases) x 3 algal cultures]
+
+The methods section of the aforementioned publication describes the procedure in greater detail:
+"The cDNA libraries were developed according to Illumina, Inc. manufacturer's instructions 
+and sequenced on the Illumina HiSeq 2000 platform. RNA-Seq paired-end libraries were prepared using the Illumina TruSeq RNA Sample Preparation Kit.
+Starting with total RNA, mRNA was first purified using poly (A) selection or rRNA depletion, then RNA was chemically fragmented and converted 
+into single-stranded cDNA using random hexamer priming; the second strand was generated next to create double-stranded cDNA. 
+Library construction began with generation of blunt-end cDNA fragments from ds-cDNA. Thereafter, A-base was added to the blunt-end in order 
+to make them ready for ligation of sequencing adapters. After the size selection of ligates, the ligated cDNA fragments which contained adapter 
+sequences were enhanced via PCR using adapter specific primers. The library was quantified with KAPA library quantification kit 
+Each library was loaded on Illumina Hiseq2000 platform, and the desired average sequencing depth was met while performing high-throughput sequencing.
+De novo assembly was performed using Trinity 2.8.5 using raw 100 bp paired-end reads. Assembly quality assessment was carried out with 
+BUSCO 3.0.2, for which the chlorophyte database of OrthoDB 10 was used as datasets at an e-value cutoff of 1e−5; 
+high-quality reads were mapped onto genome sequences using Bowtie2 2.3.5. Thereafter, the quantification of the number of reads 
+(i.e., counts mapped per transcripts) was performed following alignment and abundance estimation of each Trinity script using RSEM 1.3.2 
+and Bowtie 1.2.2, respectively. Transcripts with no count across all sampling points were removed. 
+The matrix of counts for unigenes (i.e., a collection of expressed sequences that are aligned or located to the same position on genome) 
+was used for downstream analyses. Prior to functional annotation, differential expression analysis (DEA) 
+was performed first to avoid determining the most relevant transcript for each unigene based on unnecessary assumptions at the early stage. In addition, given 
+that quantitative asymmetry between up- and downregulated unigenes was strong, SVCD 0.1.0, which does not assume the lack-of-variation between up- and downregulated unigene counts , was used for normalization of unigenes. The mean of raw counts greater than the first quartile (i.e., 5.9 raw counts) as recommended was used during normalization.
+To determine DEGs, we used DESeq2 1.20.0, and the DEGs between exponential and stationary growth phases were based on the adjusted p-values
+(i.e., DEGs were determined as unigenes with adjusted p-value < 0.01).
+
+
+
+
+
+
+PART 2:Download raw data from GEO (supplementary file)
+```{r, echo=TRUE}
+#We begin by downloading the data from GEO using Bioconductor’s GEOquery R package using the series of data identifier.
+gseid<-"GSE146789"
+
+```
+
+To obtain the conditions, we can download the normalized data using the getGEO() function, which will return an ExpressionSet, and then extract 
+the phenoData using the pData() function. In this case the intensities matrix is empty, as it is for most RNA-seq series of data.
+RNA-seq data is usually summarized as a count data table which reports, for each sample, the number of sequence fragments or reads 
+that have been assigned to each gene. The table of counts is in this case included as a supplementary file.
+```{r, echo=TRUE}
+gse <- getGEO(gseid, GSEMatrix=TRUE)[[1]] 
+
+pheno <- pData(gse)[,grepl("characteristics_ch1",colnames(pData(gse)))]
+pheno
+
+colnames(pheno) <- c("treatment","time")
+pheno
+
+phenoN <- data.frame(sampleGEO=rownames(pheno),
+                     culture=c(1,1,3,2,3,2,1,3,3,2,1,2),
+                     material=rep("Chlorella_sp_HS2",12),
+                     treatment=sub("medium: (.*)","\\1",pheno$treatment),
+                     time=sub("phase: (.*)","\\1",pheno$time))
+
+phenoN$time<-gsub("exponential growth phase","exponential",phenoN$time)
+phenoN$time<-gsub("stationary growth phase","stationary",phenoN$time)
+phenoN$treatment<-gsub("marine water","marine",phenoN$treatment)
+phenoN$treatment<-gsub("freshwater","control",phenoN$treatment)
+phenoN$condition <- paste(phenoN$treatment,phenoN$time,sep="_")
+phenoN$sampleName <- paste(phenoN$treatment,phenoN$culture,phenoN$time,sep="_")
+row.names(phenoN)=phenoN$sampleName
+
+#Checking content and dimensions of dataframe
+phenoN
+dim(phenoN)
+
+#Extracting the counts table from the supplementary file.
+setwd("C:/Users/click/OneDrive/Desktop/MY_R_DIRECTORY")
+getwd()
+wd <- getwd()
+gseSupp <- getGEOSuppFiles(gseid, makeDirectory = TRUE)
+setwd(file.path(wd,gseid))
+
+counts<- read.delim("GSE146789_RSEM_raw_gene_count_matrix.tsv.gz")
+#Non-integers suggest raw data NOT obtained with HTSeq:
+head(counts)
+dim(counts)
+#Dimensions are 
+#[1] 57640    13
+
+#we cannot assume the order is the same because the geneIDs are being treated as a variable in downloaded counts file (13 columns, not 12 for samples), 
+#rather than rowID. Therefore, first setting first column of genes as gene feature row names and then removing first column:
+
+rownames(counts)<- counts[,1]
+head(counts)
+counts<- counts[-c(1)]
+head(counts)
+
+#we NOW assume the order of samples in count file is the same as described in GSM description:
+colnames(counts) <- phenoN$sampleName
+
+#Checking again the dataframe and dimensions:
+head(counts)
+dim(counts)
+#[1] 57640    12
+
+#Converting dataframe to matrix
+countsM <- as.matrix(counts)
+```
+
+DATA EXPLORATION
+As part of the exploration, we first study total of reads per sample (library size)
+
+```{r, echo=TRUE}
+
+sampleT <- apply(countsM, 2, sum)/10^6
+sampleT
+# control_1_exponential  marine_1_exponential  marine_3_exponential  marine_2_exponential  control_3_stationary 
+# 11.201653             10.854584             10.910058             10.117702              9.743950 
+# control_2_stationary  control_1_stationary   marine_3_stationary control_3_exponential control_2_exponential 
+# 11.280635             10.588014             10.271681             10.998420             10.055451 
+# marine_1_stationary   marine_2_stationary 
+# 10.054987              9.378066 
+
+range(sampleT)
+#[1]  9.378066 11.280635
+
+#Researchers did not apply log2: 
+boxplot(countsM) 
+boxplot(log2(countsM+2))
+
+#Library size
+lSize <- colSums(countsM)
+#Again, around 10M each sample suggests homogeneity
+lSize 
+
+sampleTDF <- data.frame(sample=names(sampleT), total=sampleT)
+
+p <- ggplot(aes(x=sample, y=sampleT, fill=sampleT), data=sampleTDF) + geom_bar(stat="identity")
+p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("")
+
+```
+
+
+PART 3: Perform quality assessment. Comment results and decide whether they have enough quality to be analysed and remove outlier samples if necessary
+```{r, echo=TRUE}
+#FILTERING
+# One of the characteristics of RNA-seq data is that it contains a lot of zeros, corresponding to genes that 
+# are not expressed. It is therefore important to remove genes that consistently have zero or very low counts. 
+# In this case we will only keep genes that have at least 10 reads in at least 3 samples. 
+# One recommendation for the number of samples would be set to the smallest group size. 
+# In our example, all group of controls and case-treatments have 3 samples. 
+
+
+#Checking dimensions
+dim(countsM) 
+# 57640
+keep <- rowSums(countsM > 10) >= 3# at least 3 samples have 10 reads per gene
+countsF <- countsM[keep,]
+# Notice the decrease in the number of rows in the counts table after filtering
+dim(countsF)
+#31411
+#Examining the filtered data:
+head(countsF)
+
+
+
+```
+
+
+
+
+PART 4:Normalize data
+SVCD NORMALIZATION:
+```{r, echo=TRUE}
+#NORMALIZATION
+
+#The following text was borrowed from Dr. Lana Nonnel UVic Transciptomic course webpage:
+#https://aules.uvic.cat/pluginfile.php/1578837/mod_resource/content/3/RNAseq.html
+# "There are several methods that can be used to normalize values in count matrices. 
+# Traditionally, CPM (Counts Per Million), RPKM (Reads Per Kilobase Million) or FPKM (Fragments Per Kilobase Million) 
+# were used to report RNA-seq results. However, TPM (Transcripts Per Kilobase Million) is now more popular. 
+# CPM divide the counts by library size whereas RPKM/FPKM and TPM scale the data using gene length and library size. 
+# When comparing samples, TMM (Trimmed Mean on the M-values) is the standard method to report results. 
+# Other methods include also the GC content in the normalization step."
+#Current methods of normalization for RNA-Seq, such as RPKM, TMM, and DESeq, perform between-sample normalization by introducing 
+#a scaling per sample obtained with some form of mean or median, using all or a large set of genes. 
+#Thus their performance is expected to be similar to that of Median normalization for microarrays.
+#Since the microalgal organism Chlorella sp. HS2 evaluated in the study did not have a reference genome and instead
+#had its genome constructed de Novo, its annotation gene information, etc. was not expected to be found in Ensembl 
+#database or accessed via BiomaRt. Therefore, normalization using RPKM, FPKM or TPM that require the gene length
+#was not performed here. Instead SCVD, TMM, and CPM were performed:
+
+#SCVD NORMALIZATION:
+
+# Standard-Vector Condition-Decomposition normalization (SVCD normalization) was used in this algal study and is first demonstrate here:
+#For SVCD, the following publication and webpage are referenced:
+#Publication: Roca, Gomes, Amorim & Scott-Fordsmand: Variation-preserving normalization unveils blind spots in gene expression profiling. 
+#Sci. Rep. 7, 42460; doi:10.1038/srep42460 (2017).
+#Webpage:https://rdrr.io/github/carlosproca/cdnormbio/man/normalize.svcd.html
+
+# "With the exception of Quantile normalization, all used methods apply a multiplicative factor to the expression levels of each sample, 
+#equivalent to the addition of a number in the usual log2-scale for gene expression 
+# levels. Solving the normalization problem consists of finding these correction factors.
+# For SVCD normalization, a vectorial procedure carries out each normalization step, called 
+# Standard-Vector normalization. The samples of any experimental condition, in a properly normalized dataset, must be exchangeable. 
+#In mathematical terms, the expression levels of each gene can be considered as an 
+# s-dimensional vector, where s is the number of samples for the experimental condition. After standardization 
+# (mean subtraction and variance scaling), these standard vectors are located in a (s− 2)-dimensional hypersphere. 
+# Such exchangeability implies that, when properly normalized, the distribution of standard vectors must be invariant with respect 
+#to permutations of the samples and must have zero expected value. These properties allow to obtain a robust estimator of the 
+#normalization factors, under fairly general assumptions that do not imply any particular distribution of gene expression.
+
+#SVCD (Standard-Vector Condition-Decomposition) Normalization normalizes gene expression data following the SVCD algorithm. 
+#It also provides the estimated normalization factors and the no-variation features (e.g. genes) detected.
+
+#Components are briefly defined as follows:
+# expression.data: Numeric matrix with expression data. Rows correspond to features, for example genes. 
+# Columns correspond to samples. If rows and/or columns do not have names, they are assigned names with format "feature.[number]" 
+# and/or "sample.[number]", respectively.
+# 
+# expression.condition: character or numeric vector defining the experimental conditions. It can also be a factor. 
+# The length of expression.condition must be equal to the number of columns of expression.data, that is, to the number of samples. 
+# It can contain NA values, meaning samples to be ignored in the normalization.
+# 
+# restrict.feature:When restrict.feature is NULL, all features can be used for normalizing. Otherwise, restrict.feature is expected 
+# to be a character or numeric vector identifying the features, by name or index respectively, that can be used for normalizing.
+# 
+# search.h0.feature:Logical value indicating whether no-variation features should be searched for the final between-condition normalization, 
+# thus restricting the set of features used in this normalization. When search.h0.feature is FALSE, the complete set of features used 
+# in the within-condition normalizations is also used for normalizing between conditions.
+# 
+# convergence.threshold: Numeric vector with four elements, defining convergence parameters for the algorithm. 
+# The format is (single.step, multiple.step, single.step.search.h0.feature, multiple.step.search.h0.feature). 
+# Using values different from the default ones is only advisable when the implementation of convergence is understood in detail.
+# 
+# stdvec.graph: When not NULL, it provides a character string with the name of a directory to save graphs displaying the convergence 
+# of standard vectors, grouping conditions in sets of three. The directory can be entered as an absolute or relative path, and it is created 
+# if it does not exist. To save in the current working directory, use stdvec.graph="." or stdvec.graph="". 
+# Generating the graphs of standard vectors requires the package plotrix.
+# 
+# p.value.graph:When not NULL, it provides a character string with the name of a directory to save graphs displaying the 
+# distributions of p-values used for the identification of no-variation features. The directory can be entered as an absolute 
+# or relative path, and it is created if it does not exist. To save in the current working directory, use p.value.graph="." or p.value.graph="".
+# 
+# verbose:Logical value indicating whether convergence information should be printed to the console.
+#
+# Offset: Vector of detected normalization factors, with one factor per sample".
+
+#SVCD Normalization without offset is first performed here with following packages installed:
+#To install cdnormbio from GitHub repository, using the function install_github in the devtools package:
+#install.packages("remotes")
+#remotes::install_github("carlosproca/cdnormbio")
+library(devtools)
+#install_github("carlosproca/cdnormbio", force = TRUE)
+library(cdnormbio)
+
+expr.data <- countsF
+expr.condition <- c("control_exponential", "marine_exponential","marine_exponential","marine_exponential","control_stationary","control_stationary","control_stationary","marine_stationary", "control_exponential","control_exponential","marine_stationary","marine_stationary")
+#The following statements unfortunately generated the error: Error in normalize.standard.vector(edata[norm.feature.idx, ], condition, : normalize.svcd: No convergence:
+
+#normalize.result <- normalize.svcd(expr.data, expr.condition,restrict.feature = NULL,search.h0.feature = TRUE, convergence.threshold = c(0.01, 0.1, 0.01, 1), stdvec.graph = NULL, p.value.graph = NULL, verbose = FALSE)
+#sd(normalize.result$offset)
+#length(normalize.result$h0.feature)
+
+# The following SVCD Normalization with offset as shown below was also not successfully performed here:
+# offset.added <- rnorm(colcount(countsF))
+# expr.data <- sweep( expr.data, 2, offset.added, "+" )
+# normalize.result <- normalize.svcd(expr.data, expr.condition, stdvec.graph = "svcd_stdvec", p.value.graph = "svcd_p_value", verbose = TRUE )
+# sd( normalize.result$offset - offset.added )
+# length( normalize.result$h0.feature)
+
+#THEREFORE SVCD NORMALIZATION THAT WAS PERFORMED BY STUDY COULD NOT BE REPLICATED HERE. INSTEAD TMM AND CBM NORMALIZATION WERE PERFORMED:
+
+
+
+
+
+
+
+
+```
+
+PART 4:Normalize data
+TMM NORMALIZATION:
+```{r, echo=TRUE}
+#TMM NORMALIZATION
+
+#TMM Normalization was also demonstrated here:
+#Ensure  removal of column containing unmapped reads from count matrix.
+#The following text was borrowed from Dr. Lana Nonnel UVic Transciptomic course webpage:
+#https://aules.uvic.cat/pluginfile.php/1578837/mod_resource/content/3/RNAseq.html
+#FPKM and TPM account for gene length and library size per sample but do not take into account the rest of 
+#the samples belonging to the experiment. There are situations in which some genes can accumulate high rates of reads. 
+#To correct for these imbalance in the counts composition there are methods such as the Trimmed Mean of M-values (TMM),
+#included in the package edgeR. This normalization is suitable for comparing among the samples, for instance when performing sample aggregations.
+
+library(edgeR)
+d <- DGEList(counts = countsF)
+Norm.Factor <- calcNormFactors(d, method = "TMM")
+countsTMM <- cpm(Norm.Factor, log = T)
+#dim(countsTMM)
+countsTMMnoLog <- cpm(Norm.Factor, log = F)
+#dim(countsTMMnoLog)
+
+#Now visualizing how distribution of the TMM normalization (in log2) changed for the first sample#1 control_1_exponential):
+hist(countsTMM[,1], xlab="log2-ratio", main="TMM") 
+#Now visualizing how distribution of the TMM normalization (in log2) changed for the second sample#12 (marine_2_stationary):
+hist(countsTMM[,12], xlab="log2-ratio", main="TMM") 
+#Now visualizing how distribution of the TMM normalization (not in log2) changed for the first sample#1 control_1_exponential):
+hist(countsTMM[,1], xlab="Non-log2-ratio", main="TMM")
+
+#These histograms unfortunately do not depict bell-curve-like normal distributions. 
+#Perhaps the original matrix should be converted to integer matrix and subsequently be stripped of the rownames for normalization?"
+
+
+
+
+```
+
+
+PART 4:Normalize data
+CPM NORMALIZATION
+```{r, echo=TRUE}
+#CPM NORMALIZATION
+
+#CPM Normalization was also demonstrated here:
+#Based on the following website content:
+#https://search.r-project.org/CRAN/refmans/scTenifoldNet/html/cpmNormalization.html
+#https://web.stanford.edu/class/bios221/labs/rnaseq/lab_4_rnaseq.html
+
+#edgeR works on a table of integer read counts, with rows corresponding to genes and columns to independent 
+#libraries. edgeR stores data in a simple list-based data object called a DGEList. This type of object is 
+#easy to use because it can be manipulated like any list in R. You can make this in R by specifying the counts
+#and the groups in the function DGEList().
+
+#Assuming CPM requires integer matrix:
+#A matrix of integers requires half the amount of memory (for large dimensions). 
+#Ensuring class and type of matrix:
+class(countsF)  
+#[1] "matrix" "array"
+typeof(countsF)  # mode of the elements. In this case elements stored in the matrix are integer type
+#[1] "double"
+
+# Now  attempting to convert double matrix to integer matrix via the following function to coerces all values to integers for CPM:
+#   
+#   forceMatrixToInteger <- function(m){
+#     apply (m, c (1, 2), function (x) {
+#       (as.integer(x))
+#     })
+#   }
+# countsF_integer <- forceMatrixToInteger(countsF_integer)
+# class(countsF_integer[1,]) # integer
+
+algaeDataGroups <- expr.condition <- c("control_exponential","marine_exponential","marine_exponential","marine_exponential","control_stationary","control_stationary","control_stationary","marine_stationary", "control_exponential","control_exponential","marine_stationary","marine_stationary")
+d2 <- DGEList(counts=countsF,group=factor(algaeDataGroups))
+d2
+
+#First filtering/removing genes which did not occur frequently enough. We choose this cutoff by saying we must have at least 100 counts per million 
+#(calculated with cpm() in R) on any particular gene that we want to keep. In this example, we're only keeping a gene if it has a cpm >=100 for at least two samples:
+
+d2_cpm <- d2 
+head(cpm(d2_cpm))
+# Total gene counts per sample
+apply(d2_cpm$counts, 2, sum) 
+keep <- rowSums(cpm(d2_cpm)>100) >= 2
+d2_cpm <- d2_cpm[keep,]
+dim(d2_cpm)
+d2_cpm$samples$lib.size <- colSums(d2_cpm$counts)
+d2_cpm$samples
+
+#The calcNormFactors() function normalizes for RNA composition by finding a set of scaling factors for the library sizes that minimize the 
+#log-fold changes between the samples for most genes. The default method for computing these scale factors uses a trimmed mean of M-values (TMM) between each pair of samples:
+d2_cpm <- calcNormFactors(d2_cpm)
+#Examining the CPM-normalized matrix
+head(d2_cpm)
+
+
+```
+
+
+
+
+
+PART 5: Perform sample distribution (aggregation). Comment on this distribution
+SAMPLE AGGREGATION:
+```{r, echo=TRUE}
+#Hierarchical clustering and Principal Component Analysis are performed PCA to examine how samples aggregate.
+#The purpose is to see whether samples aggregate by condition or if there are some outliers, that mayhave a biological or technical causes:
+
+#Hierarchical clustering
+#The TMM-normalized data is used:
+x<-countsTMM
+
+#Euclidean distance using "ward.D2" method:
+clust.cor.ward <- hclust(dist(t(x)),method="ward.D2")
+plot(clust.cor.ward, main="hierarchical clustering", hang=-1,cex=0.8)
+
+#Euclidean distance using "average" method:
+clust.cor.average <- hclust(dist(t(x)),method="average")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8)
+
+#Euclidean distance using "complete" method:
+clust.cor.complete <- hclust(dist(t(x)),method="complete")
+plot(clust.cor.complete, main="hierarchical clustering", hang=-1,cex=0.8)
+
+#Correlation based distance
+clust.cor.ward <- hclust(as.dist(1-cor(x)),method="ward.D2")
+plot(clust.cor.ward, main="hierarchical clustering", hang=-1,cex=0.8)
+
+clust.cor.average<- hclust(as.dist(1-cor(x)),method="average")
+plot(clust.cor.average, main="hierarchical clustering", hang=-1,cex=0.8)
+
+#Based on clustering results, the aggregation within the 2 main branched groups appears homogenesous, but the two branched groups are heterogeneous.
+#In addition, the samples do NOT aggregate by Chlorella sp. HS2 algal culture# 1,2, or 3.
+
+# PCA
+#library ggfortify is required for the autoplot to understand and plot PCA results
+
+summary(pca.filt <- prcomp(t(x), scale=T ))
+
+#Based on the results, cumulative proportion of variance explained with the first two PCs (PC1 and PC2) is ~53% (35.09%+16.77%)
+#3 eigenvalues capture most dispersion (variance), which may help develop a relatively simplified model via explored variable reduction
+#PCA shows also that there is NO aggregation by algal culture, but that there is some aggregation by condition.
+
+autoplot(pca.filt, data=phenoN, colour="culture", shape="condition")
+
+```
+
+
+PART 6: Obtain differentially expressed genes (DEG). Choose a method and justify the 
+variables included in the model, each step performed to obtain the list and DEG
+selection criteria. Specify the thresholds taken to obtain the final list of DEG
+DIFFERENTIAL EXPRESSION ANALYSIS(DEA)
+voom-limma APPROACH:
+```{r, echo=TRUE}
+#voom-limma APPROACH:
+
+#RNA-seq are represented by counts matrices and therefore linear models, such that those implemented in limma, cannot be directly applied. 
+#Options to be taken include: (1) Transform counts matrices and apply limma and (2) Use specific methods that account for count data distribution
+#For this practical, voom transformation-based and a DESeq2-based approach accounting for a Negative Binomial distribution of the data will be performed.
+
+
+#The voom + limma Approach:
+
+# "Text and code borrowed from Dr. Lana Nonell UVic Transcriptomics Course website: 
+# The limma approach for RNA-seq converts read counts to log2-counts-per-million (logCPM) and the mean-variance relationship is modeled 
+# either with precision weights (the voom approach) or with an empirical Bayes prior trend (the limma-trend approach). With these approachs, 
+# RNA-seq data can be analyzed as if it was microarray data. Voom estimates the mean-variance relationship of the log-counts and creates weights that are later on used by limma"
+
+#Now applying the voom transformation and the limma model to perform differentially expressed genes using variable condition.
+
+condition <- as.factor(phenoN$condition)
+
+#Design matrix
+design <- model.matrix(~0+condition)
+rownames(design) <- phenoN$sampleName
+colnames(design) <- gsub("condition", "", colnames(design))
+
+voom.res <- voom(countsF, design, plot = T) 
+
+#Model fitting:
+fit <- lmFit(voom.res, design) 
+
+#Contrasts
+contrast.matrix <- makeContrasts(con1=control_exponential, con2=control_stationary, levels = design)
+
+#Contrasts fit and Bayesian adjustment
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fite <- eBayes(fit2)
+
+summary(decideTests(fite, method = "separate"))
+# con1  con2
+# Down    4428  3444
+# NotSig 18391 19566
+# Up      8592  8401
+
+#Based on results, there appear to be similar upregulated genes in both con1 and con2. However, there is is more down-regulation (4428)
+#in con1 (control_exponential) compared to 3444 in con2 (control_stationary)
+
+#In case of inability to adjust for multiple comparisons:
+summary(decideTests(fite, adjust.method = "none", method = "separate"))
+
+#Based on results, this shows similar disparity
+
+#Global model
+top.table <- topTable(fite, number = Inf, adjust = "fdr")
+
+#Now evaluating how p-values behave. Under the null hypothesis, p-values are expected to have a uniform distribution.
+
+hist(top.table$P.Value, breaks = 100, main = "results P")
+
+#Significant results were obtained at FDR < 0.05 and the distribution of p-values shows that there is some variability that was not considered in the model. 
+
+#Now including variable culture in the model to see whether results improve:
+
+condition <- as.factor(phenoN$condition)
+culture <- as.factor(phenoN$culture)
+
+#Design matrix
+design <- model.matrix(~0+condition+culture)
+rownames(design) <- phenoN$sampleName
+colnames(design) <- gsub("condition", "", colnames(design))
+
+voom.res <- voom(countsF, design, plot = T) 
+
+#Model fitting
+fit <- lmFit(voom.res, design) 
+
+#Contrasts
+contrast.matrix <- makeContrasts(con1=control_exponential, con2=control_stationary,levels = design) 
+                                 
+#Contrasts fit and Bayesian adjustment
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fite <- eBayes(fit2)
+
+#Based on results,         
+#         con1  con2
+# Down    4982  1174
+# NotSig 16967 21849
+# Up      9462  8388
+
+#There appears to be significantly different gene down-regulation between con1 and con2 when including both culture and condition in model
+
+summary(decideTests(fite, method="separate"))
+
+# For inability to adjust for multiple comparisons:
+summary(decideTests(fite, adjust.method = "none"))
+
+#Based on results, similar disparity is apparent between con1 and con2 with more complicated model:
+
+#Global model
+top.table <- topTable(fite, number = Inf, adjust = "fdr")
+
+t1 <- topTable(fite, n = Inf, coef = "con1", adjust = "fdr")
+t2 <- topTable(fite, n = Inf, coef = "con2", adjust = "fdr")
+
+save(t1,t2,file="toptables.limma.culturecondition.RData")
+
+#Now evaluating and observing p-value distribution:
+
+hist(top.table$P.Value, breaks = 100, main = "results P")
+
+
+#Based on results with given THRESHHOLD of alpha=0.05, P-values have a much better distribution after adjusting for algal culture.
+#Those effects deemed fixed by including culture in the model; check the limma users guide for indications 
+#to treat culture as a random effect in the model.Volcano plots and heat maps can also be created on the next results objects.
+
+#BASED ON THESE RESULTS, THE VOOM-LIMMA APPROACH WAS THEREFORE ADOPTED HERE FOR DIFFERENTIAL EXPRESSION ANALYSIS:
+#NONETHELESS, THE DESeq2 APPROACH ADOPTED BY THIS GEO STUDY WAS ALSO ATTEMPTED AS FOLLOWS:
+
+```
+
+
+PART 6:
+DIFFERENTIAL EXPRESSION ANALYSIS(DEA)
+DESeq2 APPROACH and SVA APPROACHES:
+```{r, echo=TRUE}
+#DESeq2 was used by this GEO study and is another popular method to perform differential expression on RNA-seq data. 
+#The package DESeq2 provides methods to test for differential expression by use of negative binomial generalized linear models; As input, the DESeq2 package expects raw count #data in the form of a matrix of integer values. The DESeq2 model internally corrects for library size, so transformed or normalized values such as counts scaled by library size #should not be used as input. The estimates of dispersion and logarithmic fold changes incorporate data-driven prior distributions.
+#DESeqDataSet is the class used by the DESeq2 package to store the read counts and the intermediate estimated 
+#quantities during statistical analysis is the. DESeqDataSet extends the RangedSummarizedExperiment class. 
+#A DESeqDataSet must have an associated design formula that contains the variables that will be used in modeling.
+#Note: It is important to ensure columns of the counts matrix and rows of the variables (about the samples) 
+#are in the same order, as DESeq2 will not check it.
+
+
+#DESeq2 on counts matrix
+#The DESeqDataSet from the filtered counts matrix is used:
+#Note: To benefit from the package default settings of the package, variable of interest 
+#should be placed at the end of the formula and the control level (e.g. freshwater) should be the first level. 
+#This is not necessary if contrast option is used, as done here:
+
+#dds <- DESeqDataSetFromMatrix(countData = countsF,colData = phenoN, design = ~condition)
+
+#Note: The previous statement generated the error message: 
+#Error in DESeqDataSet(se, design = design, ignoreRank):some values in assay are not integers
+#dds <- DESeq(dds)
+
+# Global model
+#Note: #lfcThreshold is by default 0
+#resG <- results(dds, alpha=0.05) 
+#summary(resG)
+
+# Contrasts, we just check two of them
+#res1 <- results(dds, contrast=c("condition","marine_exponential","control_exponential"))
+#summary(res1)
+
+# res1DF <- as.data.frame(res1)
+# res1DFS <- res1DF[order(res1DF$pvalue),]
+# res1DFSign <- res1DFS[!is.na(res1DFS$pvalue) & res1DFS$pvalue<0.05, ]
+# datatable(res1DFSign)
+
+#DESeq2 on SummarizedExperiment
+#A DESeqDataSet object can be constructed from a count matrix or a SummarizedExperiment object. 
+#The object should have been loaded from package "HS2" based on publication, which includes the available HS2SE ready available. 
+#The SummarizedExperiment object can also be constructed from the original data.
+
+# library(hs2SE)
+# data("hs2SE")
+# colData(hs2SE)
+# hs2SE$condition <- as.factor(paste(hs2SE$treatment,hs2SE$time,sep="_"))
+# ddsSE <- DESeqDataSet(hs2SE, design = ~ culture + condition)
+# ddsSE
+# #Filtering
+# keep <- rowSums(counts(ddsSE) >= 10) >= 3
+# ddsSE <- ddsSE[keep,]
+
+# # Will continue  with counts table in future when this program is debugged
+
+
+
+#SVA
+#SVA can also but was not applied to this transcriptomics experiment. 
+#Would be obtaining surrogate variables later included in both limma and DESeq2 models but generated error messages here and
+#abandoned this approach to DEA:
+
+```
+
+PART 7: Annotate the results to HGNC symbols:
+
+```{r, echo=TRUE}
+
+#BASED ON CITED ASSOCIATED PUBLICATION:
+#Yun JH, Pierrelée M, Cho DH, Kim U, Heo J, Choi DY, et al. Transcriptomic analysis of Chlorella sp. HS2 suggests the overfow of acetyl-CoA and 
+#NADPH cofactor induces high lipid accumulation and halotolerance. Food Energy Secur. 2020. https://doi.org/10.1002/fes3.267
+
+#"Functional annotation of DEGs was subsequently performed using Swiss-Prot, Pfam, and Kyoto Encyclopedia of Genes and Genomes (KEGG) databases. 
+#First, following Trinotate 3.2.0's recommendation, transcript coding regions were predicted that could be assigned to putative proteins 
+#using TransDecoder 5.5.0. Thereafter, homologies were identified using in parallel BLASTp from BLAST+ 2.9.0; to identify pfam domains, 
+#hmmscan from HMMER 3.2.1 was used. BLASTp and hmmscan were run twice from the predicted proteins. 
+#SignalP 5.0b was used to determine eukaryotic signal peptides within transcripts.BLASTx was also used to find homologues, 
+#which allows to identify sequence similarities within all six reading frames of the transcript. 
+#All BLAST runs were performed against the Swiss-Prot database through DIAMOND 0.8.36 with an e-value cutoff of 1e−10. 
+#Then, KEGG cross-references associated with BLASTx or BLASTp hits were retrieved to assign each BLAST hit with a KEGG Orthology number (KO).
+#Transcripts without a BLASTx or BLASTp hit were excluded, and a pair of transcript and coding region was removed when the KOs of corresponding 
+#transcript and coding regions were not identical. In addition, when one gene had multiple KOs, the mean of average e-values was computed and 
+#the KO with the lowest mean was selected as the most relevant KO. Metabolic pathway maps were constructed using KEGG mapper based on the 
+#organism-specific search results of Chlorella variabilis (cvr) and biological objects for each KO were determined using KEGG BRITE. 
+#Enrichment was performed by implementing GSEAPreranked from Gene Set Enrichment Analysis with the conda package GSEApy 0.9.15 
+#A term was considered to be significantly enriched when its false discovery rate (FDR) was lower than 0.25. 
+#All data generated from our transcriptome analysis are available at the NCBI GEO repository GSE146789" 
+#Results can be presented with the HGNC symbols if in the future gene length is obtained via biomaRt.
+
+```
+
+
+PART8: Generate a volcano plot and a heat map for the results:
+Volcano PLot:
+```{r, echo=TRUE}
+#VOLCANO PLOT:
+
+#Creating a volcano plot using ggplot2:
+
+colorS <- c("blue", "grey", "red")
+#CHECK p or p.adj
+
+#Specific parameters
+#genes to be displayed with names
+showGenes <- 20 
+dataV <- topTable(fite, n = Inf, coef = "con1", adjust = "fdr")
+dataV <- dataV %>% mutate(gene = rownames(dataV), logp = -(log10(P.Value)), logadjp = -(log10(adj.P.Val)),
+                          FC = ifelse(logFC>0, 2^logFC, -(2^abs(logFC)))) %>%
+  mutate(sig = ifelse(P.Value<0.01 & logFC > 1, "UP", ifelse(P.Value<0.01 & logFC < (-1), "DN","n.s"))) 
+
+#ideally an adj.P.Val < 0.05 is needed
+
+p <- ggplot(data=dataV, aes(x=logFC, y=logp )) +
+  geom_point(alpha = 1, size= 1, aes(col = sig)) + 
+  scale_color_manual(values = colorS) +
+  xlab(expression("log"[2]*"FC")) + ylab(expression("-log"[10]*"(p.val)")) + labs(col=" ") + 
+  geom_vline(xintercept = 1, linetype= "dotted") + geom_vline(xintercept = -1, linetype= "dotted") + 
+  geom_hline(yintercept = -log10(0.1), linetype= "dotted")  +  theme_bw()
+
+p <- p + geom_text_repel(data = head(dataV[dataV$sig != "n.s",],showGenes), aes(label = gene)) 
+
+print(p)
+
+#Note this generated the following Warning message:ggrepel: 19 unlabeled data points (too many overlaps). Consider increasing max.overlaps
+
+
+```
+
+PART8: Generate a volcano plot and a heat map for the results:
+HeatMap:
+```{r, echo=TRUE}
+#HEATMAP
+#Now plotting heatmap results for the limma model adjusting for variable patient:
+#NOTE: THE FOLLOWING CODE WAS COMMENTED OUT AS CPU RESOURCES WERE INSUFFICEINT TO ALLOW FOR RMD-HTML DOCUMENT FORMATION:
+
+t1 <- topTable(fite, n = Inf, coef = "con1", adjust = "fdr")
+res1 <- t1[t1$P.Value<0.01 & abs(t1$logFC) > 1,]
+
+data.clus <- countsTMM[rownames(res1),]
+
+cond.df <- as.data.frame(condition)
+rownames(cond.df) <- colnames(data.clus)
+pheatmap(data.clus, scale = "row", show_rownames = TRUE, annotation_col = cond.df)
+
+
+#NOW GENERATING HEATMAP FOR ONLY ON INVOLVED SAMPLES:
+#NOTE: THE FOLLOWING R CODE GENERATED THE FOLLOWING ERROR MESSAGE AND WAS THEREFORE COMMENTED OUT:
+# Error in seq.default(-m, m, length.out = n + 1) : 
+#   'from' must be a finite number
+# In addition: Warning messages:
+#   1: In min(x, na.rm = T) : no non-missing arguments to min; returning Inf
+# 2: In max(x, na.rm = T) : no non-missing arguments to max; returning -Inf
+
+# phenoN_DPN_24 <- phenoN[phenoN$cond %in% c("Control_24h","DPN_24h"),]
+# data.clus <- countsTMM[rownames(res1), rownames(phenoN_DPN_24)]
+# 
+# cond.df <- as.data.frame(phenoN_DPN_24$cond)
+# rownames(cond.df) <- colnames(data.clus)
+# pheatmap(data.clus, scale = "row", show_rownames = TRUE, annotation_col = cond.df)
+
+```
+
+
+PART 9: Drive some conclusions using the description on the data given in GEO
+```{r, echo=TRUE}
+#PART 9: Based on publication associated with this GEO study: 
+#"Results indicated that the transcripts involved in photosynthesis, TCA, and Calvin cycles were down-regulated, whereas the upregulation of DNA 
+# repair mechanisms and an ABCB subfamily of eukaryotic type ABC transporter was observed at high salinity condition. Also, while key enzymes 
+# associated with glycolysis pathway and triacylglycerol (TAG) synthesis were determined to be upregulated from early growth phase, 
+# salinity stress seemed to reduce the carbohydrate content of harvested biomass from 45.6 dw% to 14.7 dw% and nearly triple the total lipid content from 26.0 dw% to 62.0 dw%. #These results suggest that 
+# the reallocation of storage carbon toward lipids played a significant role in conferring the viability of this alga under high salinity stress by remediating high level of #cellular stress partially resulted from ROS generated in oxygen-evolving thylakoids as 
+# observed in a direct measure of photosystem activities".
+
+
+```
+
+THANK YOU VERY MUCH FOR YOUR CONSIDERATION
+
+
