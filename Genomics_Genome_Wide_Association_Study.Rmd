@@ -1,0 +1,1203 @@
+---
+title: "Genomics ADNI GWAS Practical"
+author: "Pierre Wensel"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    highlight: default
+    number_sections: true
+    theme: readable
+    toc: true
+    toc_depth: 2
+    toc_float: true
+  pdf_document:
+    toc: true
+    toc_depth: '2'
+  word_document:
+    toc: true
+    toc_depth: '2'
+---
+
+#DESCRIPTIVE ANALYSIS OF PHENOTYPE AND COVARIATES:
+
+For this Genomics Proposal exercise, we will use data from the first batch of a Genome Wide Association Study (GWAS) study performed 
+by the Alzheimer's Disease Neuroimaging Initiative (ADNI). This data contains information of around 800
+individuals (200 normal controls, 400 individuals with cognitive decline, and 200 mild AD). 
+For this study, we performed all the required steps (QC and association analyses) to find those SNP which are associated 
+with Alzheimer’s disease status (DISEASE_STATUS). We adjusted the models by age, sex, years of
+education, apoe4 status and the two first principal components. We furthermore create QQ-plots and Manhattan plots and 
+highlighted those SNP that are statistically significant after Bonferroni correction.Furthermore, we created a table including the SNPs with a p-value < 10-8 (later adjusted upwards to 10-6 threshold), its chromosome, genomic position, minor allele, minor allele frequency, the annotated gene and the OR under dominant, recessive and additive model. We additionally created a genetic score by combining the SNPs you think are more appropiated and assess its performance in an association model.GWAS have been used to discover thousands of SNPs associated with several complex diseases (MacArthur et al. 2016). The basic statistical methods are similar to those previously described, in particular, the massive univariate testing. The main issue with GWAS is data management and computation. Most publicly available data is in PLINK format, where genomic data is stored in a binary BED file, and phenotype and annotation data in text BIM and FAM files.
+We will illustrate the analysis of a GWAS including 100,000 SNPs that have been simulated using real data from a case-control study.
+Our phenotype of interest is Alazheimer's Disease Status (0: NC; 1: LCMI+AD) that has been created using information of each individual patient evaluated. Genome-based studies are normally analyzed using a multistage approach. In the first step researchers are interested in assessing association between the outcome and thousands of SNPs. In a second and possibly third step, medium/large scale studies are performed in which only a few hundred of SNPs,those with a putative association found in the first step, are genotyped. SNPassoc is specially designed for analyzing this kind of designs.
+
+#METHODS
+Genotype data was made available in PLINK format. Phenotype data (‘adni_demographics.txt’) was made also available
+in the online University of Vic M=moodle. After installing and loading appropriate packages and libraies, loading genotype data 
+in PLINK format was loaded (.bed, .bim, .fam files).Geno is an object of class SnpMatrix that stores the SNPs in binary (raw) format. 
+While some basic phenotype data is usually available in the fam field of the SnpMatrix object, 
+a more complete phenotypic characterization of the sample is usually distributed in additional text files. 
+The complete phenotype data is in a tab-delimited file.The pheno file contains phenotypic information for a different set of individuals that overlap with those in the ADNI_geno object. Therefore, before analysis, we needed to correctly merge and order the individuals across genomic and phenotype datasets. The Shapiro–Wilk test for normality was performed on phenotypic AGE data. We then perform the quality control (QC) of genomic data at the SNP and individual levels, before association testing (Anderson et al. 2010). 
+For QC for SNPs, Different measures can be used to perform QC and remove:SNPs with a high rate of missing;
+Rare SNPS (e.g. having low minor allele frequency (MAF); and SNPs that do not pass the HWE test.Typically, markers with a call rate less than 95% are removed from association analyses, although some large studies chose higher call-rate thresholds (99%). Markers of low MAF (<5%) are also filtered. The significance threshold rejecting a SNP for not being in HWE has varied greatly between studies, from thresholds between 0.001 and 5.7×10−7 (Clayton et al. 2005). Including SNPs with extremely low P-values for the HWE test will require individual examination of the SNP genotyping process. A parsimonious threshold of 0.001 may be considered, though robustly genotyped SNPs below this threshold may remain in the study (Anderson et al. 2010), as deviations from HWE may indeed arise from biological processes.The snpStats functions do not compute P-values of the HWE test but computes its z-scores.  A P-value of 0.001 corresponds to a z-score of ±3.3 for a two-tail test. Strictly speaking, the HWE test should be applied to controls only (e.g. DISEASE_STATUS = 0 or NC). However, the default computation is for all samples. We thus filter SNPs with a call rate >95%, MAF of >5% and z. HWE<3.3 in controls. Only CN column was deemed as control in study. Quality control of individuals or biological samples, comprised four main steps (Anderson et al. 2010): Identification of individuals with discordant reported and genomic sex,Identification of individuals with outlying missing genotype or heterozygosity rate, Identification of duplicated or related individuals, and Identification of individuals of divergent ancestry from the sample.To address Duplicated or related individuals: GWAS studies are typically based on population samples. Therefore, close familial relatedness between individuals is not representative of the sample. We, therefore remove individuals whose relatednessis higher than expected. The package SNPRelate is used to perform identity-by-descent (IBD) analysis, computing kinship within the sample. The package requires a data in a GDS format that is obtained with the function snpgdsBED2GDS. In addition, IBD analysis requires SNPs that are not in LD (uncorrelated). The function snpgdsLDpruning iteratively removed adjacent SNPs that exceed an LD threshold in a sliding window. After QC for SNPs and individuals, the SNPStats package-based functions were used to model association between SNPs and covariates to categorical response variable DISEASE_STATUS, and p-values for respective SNPs with respective Bonforronic threshhold were obtained for each model. QQ-plots for each model and a Manhattan plot were generated. After identifying 4 SNPs with an increased threshold p-value of 1-^-6, the SNPassoc package and functions were used to generate p-values, Manhattan plot,results summary table, missing data-plots, etc. and other data for each of the 4 pre-selected SNPs for dominant, recessive, and log-additive models (codominant and overdominant not included).Genetic risk scores were next generated using SNPassoc and MASS package libtaries. All models were incrementally adjusted by covariates, including principal components assessed via PCA analysis. Annotated genes for 4 SNPs were obtained via BioMart. No FDR threshold was used for p-value assessment of model results.
+
+#RESULTS
+
+Table 1: Summary table describing SNPs indentified to be associated with Alzheimer's Disease and associated attributes:
+
+#             chromosome   snp.name      cM position Minor_allele Major_allele or.dominant$OR or.recessive$OR or.additive$OR
+# rs11595021         10 rs11595021 80.6100 64333276            A            C           2.12              NA           2.29
+# rs7157639          14  rs7157639 50.0095 52457911            T            C           2.44             1.9           2.14
+# rs2075650          19  rs2075650 71.5247 50087459            G            A             NA              NA           2.58
+# rs8141950          22  rs8141950 53.1236 42724809            T            C           0.22             0.0           0.22
+#             pvalue.dominant pvalue.recessive pvalue.additive major_allele_frequency minor_allele_frequency  annotated_gene
+# rs11595021    1.689895e-04     8.069433e-06    2.916963e-07                   89.8                   10.2                
+# rs7157639     2.394380e-06     2.901018e-01    6.404617e-06                   87.9                   12.1 ENSG00000130204
+# rs2075650               NA               NA    8.159943e-08                   70.7                   29.3 ENSG00000073712
+# rs8141950     5.256176e-07     1.000000e+00    1.318966e-06                   92.9                    7.1                
+
+#The number of SNPs removed from the association analyses were as follows: Number of SNPs removed for bad call rate=42467,
+Number of SNPs removed for low MAF=58344; Number of SNPs that do not pass HWE test=112;total number of SNPs do not pass QC=99009
+The Genetic Risk Scores corresponding to the 4 identified SNPs were computed to be as follows: 
+score
+  1   2   3   4   5   6   7   8 
+ 32 184 105 250 131  25   1   1 
+
+#DISCUSSION AND CONCLUSIONS
+A total of 4 SNPs were identified as having statistically significant 
+The Q-Q and Manhattan plot revealed low Lambda values and associated SNPs in chromosomes 2 and 10 first, but elsewhere at 10,14,9,and 22 using SNPassoc Manahatatn plot function. One odds ratio for SNP rs2075650 for additive model suggested a whopping 258% increased risk of onset of Alzheimer's Disease. The genetic risk scores suggested higher AD risk associated with this SNP.
+
+#APPENDIX
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#Get working directory
+getwd()
+# Set working directory 
+setwd("C:/Users/click/OneDrive/Desktop/MY_R_DIRECTORY")
+
+library(biomaRt)
+library(dplyr)
+library(snpStats)
+library(SNPassoc)
+library(SNPRelate)
+library(xtable)
+library("geneplotter")
+library(data.table)
+library(ggplot2) 
+library(MASS)
+library(PredictABEL)
+library(tidyverse)
+library(ggrepel)
+library(tidyverse)
+library(stringr)
+source("https://raw.githubusercontent.com/isglobal-brge/book_omic_association/master/R/manhattanPlot.R")
+
+
+#The following are prior installation statements
+# install.packages(c("devtools","broom","MASS"))
+# source("http://www.bioconductor.org/biocLite.R")
+# biocLite(c("Biobase","snpStats","DESeq2"))
+# install.packages("snpStats")
+# install.packages("SNPassoc")
+# install.packages("SNPRelate")
+# install.packages("xtable")
+# install.packages("data.table")
+# install.packages("MASS")
+# install.packages("PredictABEL")
+# install.packages("tidyverse")
+# install.packages("ggrepel")
+#install.packages("Rmpfr") to prevent integer overflow error when graphing Manhattan Plot:
+
+# We start by loading genotype data that are in PLINK format (obesity.bed, obesity.bim, obesity.fam files).
+plink <- read.plink("ADNI_cluster_01_forward_757LONI") 
+#The imported object is a list containing the genotypes, the family structure and the SNP annotation.
+names(plink)
+#We store genotype, annotation and family data in different variables for downstream analyses
+geno <- plink$genotypes 
+head(geno)
+#Annotation
+annotation <- plink$map 
+head(annotation)
+family <- plink$fam 
+head(family)
+
+#Assigning rownames
+rownames(geno) <- family$member 
+
+# Geno is an object of class SnpMatrix that stores the SNPs in binary (raw) format. 
+# While some basic phenotype data is usually available in the fam field of the SnpMatrix object, 
+# a more complete phenotypic characterization of the sample is usually distributed in additional text files. 
+# The complete phenotype data is in a tab-delimited file.
+
+#Phenotype
+pheno <- read.delim("adni_demographics.txt", sep = " ") 
+head(pheno)
+
+#The pheno file contains phenotypic information for a different set of individuals that overlap with those in the ADNI_geno object. 
+#Therefore, before analysis, we need to correctly merge and order the individuals across genomic and phenotype datasets. 
+#The row names of geno correspond to the individual identifiers (id) variable of pheno. 
+#Consequently, we also rename the rows of pheno with the ID variable:
+
+rownames(pheno) <- pheno$ID
+head(pheno)
+#Checking if the row names of the datasets match
+identical(rownames(pheno), rownames(geno))
+#[1] FALSE
+
+#FALSE indicates that either there are different individuals in both objects or that they are in different order. 
+#This is fixed by selecting common individuals.
+ids <- intersect(rownames(pheno), rownames(geno))
+geno <- geno[ids, ]
+pheno <- pheno[ids, ]
+family <- family[ids, ] 
+identical(rownames(pheno), rownames(geno))
+
+#[1] TRUE
+head(pheno) 
+
+#Evaluating distributions before QC steps:
+
+#The following code checks the normality of the phenotypes. Generally, the residuals will be also normal if phenotypes are normal . 
+#For instance, Checking Age Continuous Variable:
+hist(pheno$AGE,xlab="AGE",main="Histogram AGE") 
+shapiro.test(pheno$AGE) 
+boxplot.age<- boxplot(pheno$AGE) 
+
+#The Shapiro–Wilk test for normality indicates that data are not normal base don low p-value of p-value = 6.801e-07. 
+#A future solution for this problem that was not performed here is to check for outliers and transform data to get the normality of the phenotype:
+# outliers <- boxplot.age$out; outliers
+# pheno <- pheno[-which(pheno$AGE%in%outliers),] 
+# shapiro.test(pheno$AGE) 
+# pheno <- na.omit(pheno)
+
+#QUALITY CONTROL (QC):
+# We now perform the quality control (QC) of genomic data at the SNP and individual levels, before association testing (Anderson et al. 2010). 
+
+#QC for SNPs:
+# Different measures can be used to perform QC and remove:
+#   
+# SNPs with a high rate of missing;
+# Rare SNPS (e.g. having low minor allele frequency (MAF); and
+# SNPs that do not pass the HWE test.
+           
+# Typically, markers with a call rate less than 95% are removed from association analyses, although some large studies chose higher 
+#call-rate thresholds (99%). Markers of low MAF (<5%) are also filtered. The significance threshold rejecting a SNP for not being in HWE 
+#has varied greatly between studies, from thresholds between 0.001 and 5.7×10−7 (Clayton et al. 2005). Including SNPs with extremely 
+#low P-values for the HWE test will require individual examination of the SNP genotyping process. A parsimonious threshold of 0.001 may be considered, though robustly genotyped SNPs below this threshold may remain in the study (Anderson et al. 2010), as deviations from HWE may indeed arise from biological processes.
+# The function col.summary() offers different summaries (at SNP level) that can be used in QC
+
+info.snps <- col.summary(geno)
+head(info.snps)
+
+# The snpStats functions do not compute P-values of the HWE test but computes its z-scores. 
+# A P-value of 0.001 corresponds to a z-score of ±3.3 for a two-tail test. 
+# Strictly speaking, the HWE test should be applied to controls only (e.g. obese = 0). 
+# However, the default computation is for all samples. We thus filter SNPs with a call rate >95%, MAF of >5% and z. HWE<3.3 in controls.
+#Note: Only CN column was deemed as control in study:
+
+controls <- pheno$DISEASE_STATUS == "CN" & !is.na(pheno$DISEASE_STATUS)
+geno.controls <- geno[controls,]
+info.controls <- col.summary(geno.controls)
+
+use <- info.snps$Call.rate > 0.95 &
+info.snps$MAF > 0.05 &
+abs(info.controls$z.HWE < 3.3) 
+#Check info.controls vs. info.snps
+mask.snps <- use & !is.na(use)
+geno.qc.snps <- geno[ , mask.snps]
+geno.qc.snps
+annotation <- annotation[mask.snps, ]
+head(annotation)
+
+#Now reporting the number of SNPs that have been removed from the association analyses:
+
+#Number of SNPs removed for bad call rate
+sum(info.snps$Call.rate < 0.95)
+#[1] 42467
+#Number of SNPs removed for low MAF
+sum(info.snps$MAF < 0.05, na.rm=TRUE)
+#[1] 58344
+#Number of SNPs that do not pass HWE test
+sum(abs(info.controls$z.HWE > 3.3), na.rm=TRUE)    
+#[1] 112
+#The total number of SNPs do not pass QC
+sum(!mask.snps)
+#[1] 99009
+
+# Quality control of individuals
+# QC of individuals, or biological samples, comprises four main steps (Anderson et al. 2010):
+   
+# Identification of individuals with discordant reported and genomic sex,
+# Identification of individuals with outlying missing genotype or heterozygosity rate,
+# Identification of duplicated or related individuals, and
+# Identification of individuals of divergent ancestry from the sample.
+# We start by removing individuals with sex discrepancies, a large number of missing genotypes and outlying heterozygosity.
+# The function row.summary() returns the call rate and the proportion of called SNPs which are heterozygous per individual.
+
+info.indv <- row.summary(geno.qc.snps)
+head(info.indv)
+
+# Gender is usually inferred from the heterozygosity of chromosome X. Males have an expected heterozygosity of 0 and females of 0.30. 
+# Chromosome X heterozygosity was extracted using row.summary() function and then plotted:
+
+geno.X <- geno.qc.snps[,annotation$chromosome=="23" & !is.na(annotation$chromosome)]
+info.X <- row.summary(geno.X)
+head(info.X)
+
+#CHECK
+mycol <- ifelse(pheno$REPORTED_SEX=="Male", "red", "green")
+plot(info.X$Heterozygosity, col=mycol, 
+     pch=16, xlab="Individuals", 
+     ylab="Heterozygosity in chromosome X")
+legend("topright", c("Males", "Females"), col=mycol,pch=16)
+
+# The figure shows that there are some reported males with non-zero X-heterozygosity and females with 
+#zero X-heterozygosity. These samples are located in sex.discrep for later removal
+
+sex.discrep <- (pheno$REPORTED_SEX=="Male" & info.X$Heterozygosity > 0.05) |  (pheno$REPORTED_SEX=="Female" & info.X$Heterozygosity < 0.25)   
+
+#Sex filtering based on X-heterozygosity is not sufficient to identify rare aneuploidies, like XXY in males. 
+#Alternatively, plots of the mean allelic intensities of SNPs on the X and Y chromosomes identify 
+#mis-annotated sex and sex chromosome aneuploidies.
+
+# Heterozygosity
+# Now, we identify individuals with outlying heterozygosity from the overall genomic heterozygosity rate that is computed by the function row.summary(). Heterozygosity, can also be computed from the statistic F=1−f(Aa)E(f(Aa))
+# where f(Aa)is the observed proportion of heterozygous genotypes (Aa of a given individual and E(f(Aa)))
+# is the expected proportion of heterozygous genotypes. A subject’s E(f(Aa)) can be computed from the MAF across all the subjects’ non-missing SNPs.
+
+MAF <- col.summary(geno.qc.snps)$MAF
+callmatrix <- !is.na(geno.qc.snps)
+hetExp <- callmatrix %*% (2*MAF*(1-MAF))
+hetObs <- with(info.indv, Heterozygosity*(ncol(geno.qc.snps))*Call.rate)
+info.indv$hetF <- 1-(hetObs/hetExp)
+head(info.indv)
+
+# In the previous figure, we compare F statistic and the Heterozygosity obtained from row.summary(). 
+# Individuals whose F statistic is outside the band (+/-) 0.1 are considered sample outliers (left panel) 
+# and correspond to those having a heterozygosity rate lower than 0.32.
+
+# Duplicated or related individuals:
+# GWAS studies are typically based on population samples. Therefore, close familial relatedness 
+# between individuals is not representative of the sample. We, therefore remove individuals whose relatedness
+# is higher than expected. The package SNPRelate is used to perform identity-by-descent (IBD) analysis, 
+# computing kinship within the sample. The package requires a data in a GDS format that is obtained with the
+# function snpgdsBED2GDS. In addition, IBD analysis requires SNPs that are not in LD (uncorrelated). 
+# The function snpgdsLDpruning iteratively removes adjacent SNPs that exceed an LD threshold in a sliding window.
+
+# Transform PLINK data into GDS format
+snpgdsBED2GDS("ADNI_cluster_01_forward_757LONI.bed",  "ADNI_cluster_01_forward_757LONI.fam","ADNI_cluster_01_forward_757LONI.bim", out="adniGDS")
+
+genofile <- snpgdsOpen("adniGDS")
+
+# Prune SNPs for IBD analysis
+set.seed(12345678)
+snps.qc <- colnames(geno.qc.snps)
+snp.prune <- snpgdsLDpruning(genofile, ld.threshold = 0.2,snp.id = snps.qc)
+snps.ibd <- unlist(snp.prune, use.names=FALSE)
+head(snps.ibd)
+
+# This process is performed with SNPs that passed previous QC checks. 
+# IBD coefficients are then computed using the method of moments, implemented in the function snpgdsIBDMoM(). 
+# The result of the analysis is a table indicating kinship among pairs of individuals:
+
+ibd <- snpgdsIBDMoM(genofile, kinship=TRUE,snp.id = snps.ibd,num.thread = 2)
+ibd.kin <- snpgdsIBDSelection(ibd) 
+head(ibd.kin)
+
+#A pair of individuals with higher than expected relatedness are considered with kinship score /> 0.1.
+ibd.kin.thres <- subset(ibd.kin, kinship > 0.1)
+head(ibd.kin.thres)
+
+#The ids of the individuals with unusual kinship are located with related() function from the SNPassoc package.
+
+ids.rel <-  SNPassoc::related(ibd.kin.thres) 
+ids.rel
+
+#In summary, individuals with more than 5% missing genotypes (Silverberg et al. 2009), with sex discrepancies,
+#F absolute value > 1, and kinship coefficient >0.1 are removed from the genotype and phenotype data
+
+use <- info.indv$Call.rate > 0.95 & abs(info.indv$hetF) < 0.1 & !sex.discrep & !rownames(info.indv)%in%ids.rel
+# or info.inv$Heterozygosity < 0.32
+mask.indiv <- use & !is.na(use)
+geno.qc <- geno.qc.snps[mask.indiv, ]
+geno.qc
+
+pheno.qc <- pheno[mask.indiv, ]
+identical(rownames(pheno.qc), rownames(geno.qc))
+
+#Again, FALSE indicates that either there are different individuals in both objects or that they are in different order. 
+#This would be fixed by selecting common individuals.
+
+dim(geno)
+#[1]    757 620901
+dim(geno.qc)
+#[1]    736 521892
+
+#DOUBLE-CHECK
+# ids2 <- intersect(rownames(pheno.qc), rownames(geno.qc))
+# geno.qc <- geno.qc[ids2, ]
+# pheno.qc <- pheno.qc[ids2, ]
+# identical(rownames(pheno.qc), rownames(geno.qc))
+# ## [1] TRUE
+# #CHECK THIS
+# family <- family[ids2, ]
+
+#Reporting the following QC measures:
+  
+#Number of individuals removed to bad call rate
+sum(info.indv$Call.rate < 0.95)
+#[1] 1
+# number of individuals removed for heterozygosity problems
+sum(abs(info.indv$hetF) > 0.1)  
+# or info.inv$Heterozygosity < 0.32
+#[1] 18
+#Number of individuals removed for sex discrepancies
+sum(sex.discrep)
+#[1] 0
+#Number of individuals removed to be related with others
+length(ids.rel)
+#[1] 3
+#The total number of individuals that do not pass QC
+sum(!mask.indiv)
+#[1] 21
+dim(pheno)
+#[1] 757   9
+dim(pheno.qc)
+#[1] 736   9
+dim(geno)
+#[1]    757 620901
+dim(geno.qc)
+#[1]736 521892
+
+#Population Ancestry
+#As GWAS are based on general population samples, individual genetic differences between individuals need to be
+# also representative of the population at large. The main source of genetic differences between individuals is 
+# ancestry. Therefore, it is important to check that there are not individuals with unexpected genetic differences 
+# in the sample. Ancestral differences can be inferred with principal component analysis (PCA) on the genomic data. 
+#Principal  component analysis (PCA) on genotypic data is used to visualize 
+#the structure of our populations. Individuals with outlying ancestry can be removed from the study while smaller differences in ancestry can be 
+# adjusted in the association models, including the first principal components as covariates.
+# PCA on genomic data can be computed using the SNPRelate package with the snpgdsPCA() function. 
+# Efficiency can be improved by removing SNPs that are in LD before PCA.
+#In addition the function snpgdsPCA() allows parallelization with the argument num.thread that 
+#determines the number of computing cores to be used.
+
+pca <- snpgdsPCA(genofile, sample.id = rownames(geno.qc),  snp.id = snps.ibd, num.thread=1)
+
+#A PCA plot for the first two components was obtained:
+
+with(pca, plot(eigenvect[,1], eigenvect[,2], xlab="1st Principal Component", ylab="2nd Principal Component", main = "Ancestry Plot",pch=21, bg="gray90", cex=0.8))
+
+#Outlying individuals on the right side of the plot where 1st PC >0.03
+#Smaller differences in ancestry are an important source of bias in association tests. 
+#Therefore, we should have kept the first three principal components and add it to the phenotypic information 
+#that will be used in the association analyses.However, as a precaution, the first 5 components were kept:
+
+pheno.qc <- data.frame(pheno.qc, pca$eigenvect[, 1:5])
+
+#After performing QC, the GDS file was closed
+closefn.gds(genofile)
+
+#NOTE: BEFORE USING SNPStats logistic regression-based model for fitting to binary categorical response variable, it
+#was important to ensure that the categorical outcome variable was factored with 2 levels and 
+#comprised of Control NC distinct from Non-Control (LCMI+AD) values
+#Current Abbreviations: AD, Alzheimer's disease; LCMI, late mild cognitive impairment;
+
+
+
+#Changing LCMI values to AD values:
+
+#head(pheno.qc)
+#class(pheno.qc$DISEASE_STATUS)
+
+pheno.qc$DISEASE_STATUS[pheno.qc$DISEASE_STATUS == 'LMCI'] <- 'AD'
+
+#class(pheno.qc$DISEASE_STATUS)
+#head(pheno.qc)
+
+#FACTORING:
+pheno.qc$DISEASE_STATUS<-as.factor(pheno.qc$DISEASE_STATUS)
+#class(pheno.qc$DISEASE_STATUS)
+levels(pheno.qc$DISEASE_STATUS) <- c(1,0)
+#pheno.qc$DISEASE_STATUS <- factor(pheno.qc$DISEASE_STATUS, levels=c(0,1), labels = c("CN", "AD"))
+
+
+#MODELING ASSOCIATION:
+#First using snp.rhs.tests() function from SNPStats package to assess association between categorical, qualitative trait DISEASE_STATUS and the SNPs:
+#For logistic regression modeling of many SNPs at once we use the snps.rhs.tests function which computes 
+#an asymptotic chi-squared statistic. This isn’t quite the same thing as the F-statistics we have been calculating 
+#but can be used in the same way for significance calculations.
+
+
+#MODEL0 (UNADJUSTED BY COVARIATE)
+res <- snp.rhs.tests(DISEASE_STATUS ~ 1, data=pheno.qc, snp.data=geno.qc,family="binomial")
+res[1:5,]
+
+bonf.sig <- 5e-8
+ps <- p.value(res)
+res[ps < bonf.sig & !is.na(ps), ]
+
+#           Chi.squared Df      p.value
+#rs2075650    31.80314  1 1.706171e-08
+#Calculate ‘lambda’ and create a Q-Q plot to assess population stratification
+
+chi2 <- chi.squared(res) 
+qq.chisq(chi2)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.900828e-01 
+
+
+#MODEL1 (ADJUSTED FOR COVARIATE AGE)
+#Assess association between DISEASE_STATUS and the SNPs adjusting for age (population stratification). 
+#There were evident differences with crude analysis
+
+res.adj1 <- snp.rhs.tests(DISEASE_STATUS ~ AGE, data=pheno.qc, snp.data=geno.qc,family="binomial")
+ps.adj1 <- p.value(res.adj1)
+res.adj1[ps.adj1 < bonf.sig & !is.na(ps.adj1), ]
+#Chi.squared Df      p.value
+#rs2075650    30.89443  1 2.724525e-08
+#Calculate ‘lambda’ and create a Q-Q plot to assess population stratification
+chi2.adj1 <- chi.squared(res.adj1) 
+qq.chisq(chi2.adj1)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.914523e-01 
+
+
+#MODEL2 (ADJUSTED BY COVARIATE REPORTED_SEX)
+#Assess association between DISEASE_STATUS and the SNPs adjusting for REPORTED_SEX there differences with crude analysis?
+res.adj2 <- snp.rhs.tests(DISEASE_STATUS ~ REPORTED_SEX, data=pheno.qc, snp.data=geno.qc,family="binomial")
+ps.adj2 <- p.value(res.adj2)
+res.adj2[ps.adj2 < bonf.sig & !is.na(ps.adj2), ]
+#Chi.squared Df      p.value
+#rs2075650     31.5669  1 1.926859e-08
+#Calculate ‘lambda’ and create a Q-Q plot to assess population stratification
+chi2.adj2 <- chi.squared(res.adj2) 
+qq.chisq(chi2.adj2)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.917134e-01
+
+
+#MODEL3(ADJUSTED BY COVARIATE YEARS_EDUCATION)
+#Assess association between DISEASE_STATUS and the SNPs adjusting for YEARS OF EDUCATION. there differences with crude analysis?
+res.adj3 <- snp.rhs.tests(DISEASE_STATUS ~ YEARS_EDUCATION, data=pheno.qc, snp.data=geno.qc,family="binomial")
+ps.adj3 <- p.value(res.adj3)
+res.adj3[ps.adj3 < bonf.sig & !is.na(ps.adj3), ]
+#Chi.squared Df      p.value
+#rs2075650    32.16804  1 1.413974e-08
+#Calculate ‘lambda’ and create a Q-Q plot to assess population stratification
+chi2.adj3 <- chi.squared(res.adj3) 
+qq.chisq(chi2.adj3)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.920151e-01 
+
+#MODEL4(ADJUSTED BY COVARIATE APOE4)
+#Assess association between DISEASE_STATUS and the SNPs adjusting for APOE4. there differences with crude analysis?
+res.adj4 <- snp.rhs.tests(DISEASE_STATUS ~ APOE4, data=pheno.qc, snp.data=geno.qc,family="binomial")
+ps.adj4 <- p.value(res.adj4)
+res.adj4[ps.adj4 < bonf.sig & !is.na(ps.adj4), ]
+#[1] Chi.squared Df          p.value    
+#<0 rows> (or 0-length row.names)
+#Calculate ‘lambda’ and create a Q-Q plot to assess population stratification
+chi2.adj4 <- chi.squared(res.adj4) 
+qq.chisq(chi2.adj4)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.823924e-01 
+
+#MODEL5(ADJUSTED BY COVARIATES FIRST 2 PRINCIPAL COMPONENTS)
+#Assess association between DISEASE_STATUS and the SNPs adjusting for First 2 Principle Components. there differences with crude analysis?
+res.adj5 <- snp.rhs.tests(DISEASE_STATUS ~ X1+X2, data=pheno.qc, snp.data=geno.qc,family="binomial")
+ps.adj5 <- p.value(res.adj5)
+res.adj5[ps.adj5 < bonf.sig & !is.na(ps.adj5), ]
+#Chi.squared Df      p.value
+#rs2075650     32.0354  1 1.513889e-08
+#Calculate ‘lambda’ and create a Q-Q plot to assess population stratification
+chi2.adj5 <- chi.squared(res.adj5) 
+qq.chisq(chi2.adj5)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.923373e-01
+
+#MODEL6(ADJUSTED BY COVARIATES AGE+REPORTED_SEX+YEARS_EDUCATION+APOE4+X1+X2)
+#Assess association between DISEASE_STATUS and the SNPs adjusting for AGE, SEX, YEARS_EDUCATION, APOE4, AND First 2 Principle Components. there differences with crude analysis?
+res.adj6 <- snp.rhs.tests(DISEASE_STATUS ~ AGE+REPORTED_SEX+YEARS_EDUCATION+APOE4+X1+X2, data=pheno.qc, snp.data=geno.qc,family="binomial")
+ps.adj6 <- p.value(res.adj6)
+res.adj6[ps.adj6 < bonf.sig & !is.na(ps.adj6), ]
+#[1] Chi.squared Df          p.value    
+#<0 rows> (or 0-length row.names)
+chi2.adj6 <- chi.squared(res.adj6) 
+
+#PLOTTING QQ_PLOT AND CALCULATING LAMBDA FOR THIS AND LATER MODELS:
+qq.chisq(chi2.adj6)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.924324e-01 
+
+#MODEL7(ADJUSTED BY COVARIATES YEARS_EDUCATION+X1+X2 TO ACHIEVE LOWEST P-VALUE)
+#Assess association between DISEASE_STATUS and the SNPs adjusting for AGE, SEX, YEARS_EDUCATION, APOE4, AND First 2 Principle Components. there differences with crude analysis?
+res.adj7 <- snp.rhs.tests(DISEASE_STATUS ~ YEARS_EDUCATION+X1+X2, data=pheno.qc, snp.data=geno.qc,family="binomial")
+ps.adj7 <- p.value(res.adj7)
+res.adj7[ps.adj7 < bonf.sig & !is.na(ps.adj7), ]
+#Chi.squared Df      p.value
+#rs2075650    32.39423  1 1.258597e-08
+chi2.adj7 <- chi.squared(res.adj7) 
+qq.chisq(chi2.adj7)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.930621e-01
+
+#NOW ADJUSTING UP BONFERRONI THRESHOLD TO INCREASE SET OF SIGNIFICANTLY RELATED SNPS:
+bonf.sig.adj <- 5e-6
+
+
+#MODEL8 (ADJUSTED BY YEARS_EDUCATION AND First 2 Principle Components BUT NOW WITH INCREASED multiple test p-value threshold:)
+#Assessing association between DISEASE_STATUS and the SNPs adjusting for YEARS_EDUCATION AND First 2 Principle Components. 
+#But now with increased threshhold to reduce risk of allowing entire GQS ADNI study to rely on single p-value that potentially reflects false-postive:
+
+res.adj7[ps.adj7 < bonf.sig.adj & !is.na(ps.adj7), ]
+#Chi.squared Df      p.value
+#rs11595021    24.05801  1 9.347657e-07
+#rs7157639     22.20638  1 2.448590e-06
+#rs2075650     32.39423  1 1.258597e-08
+#rs8141950     21.12529  1 4.302136e-06
+chi2.adj7 <- chi.squared(res.adj7) 
+qq.chisq(chi2.adj7)
+#N      omitted       lambda 
+#5.218920e+05 0.000000e+00 9.930621e-01 
+
+res.adj7_rs<-res.adj7[ps.adj7 < bonf.sig.adj & !is.na(ps.adj7),]
+class(res.adj7_rs)
+#rs11595021    24.05801  1 9.347657e-07
+#rs11595021    22.20638  1 2.448590e-06
+#rs2075650     32.39423  1 1.258597e-08
+#rs8141950     21.12529  1 4.302136e-06
+
+#BASED ON THESE low p-value RESULTS, the SNPs that were first demonstrated to have statistically significant association with ADNI DISEASE_STATUS
+#FOR THIS GWAS were rs11595021,rs7157639,rs2075650,and rs8141950. These pre-selected SNPs were then evalauted further via SNPassoc models and Risk SCore assessment:
+
+
+#CREATING MANHATTAN PLOT
+
+pvals <- data.frame(SNP=annotation$snp.name, CHR=annotation$chromosome,BP=annotation$position,P=p.value(res.adj7))
+# missing data is not allowed
+pvals <- subset(pvals, !is.na(CHR) & !is.na(P)) 
+plt <- manhattanPlot(pvals, color=c("grey90", "grey40"))
+plt
+
+#The following error messages were generated during Manhattan PLotting. Package rpfr was installed to prevent
+#integer overflow but still did not prevent errors. Therefore, above code for Manhatta Plot using snpStats package was commented out:
+# Warning messages:
+#   1: There was 1 warning in `mutate()`.
+# In argument: `tot = cumsum(chr_len) - chr_len`.
+# Caused by warning:
+#   ! integer overflow in 'cumsum'; use 'cumsum(as.numeric(.))' 
+# 2: There were 7 warnings in `dplyr::summarize()`.
+# The first warning was:
+# In argument: `center = (max(BPcum) + min(BPcum))/2`.
+# In group 6: `CHR = 6`.
+# Caused by warning in `max(BPcum) + min(BPcum)`:
+#   ! NAs produced by integer overflow
+# Run dplyr::last_dplyr_warnings() to see the 6 remaining warnings. 
+# > plt
+# Error in UseMethod("depth") : 
+#   no applicable method for 'depth' applied to an object of class "NULL"
+# In addition: Warning message:
+#   Removed 146468 rows containing missing values (`geom_point()`). 
+
+
+#Based on first SNPStats-based Manhattan plot, SNP associated to DISEASE_STATUS vis low p-values under threshold were located on chromosomes 2 and 10:
+
+
+#NOW PREPARING DATA FOR NARROWED, ADDITIONAL ANALYSIS USING BARCELONA"S SNPassoc Package:
+
+#Note: The prohibitively large GB-sized base_data.txt was not used as a data source to ultimately generate the 
+#final outcome table. Instead, geno.qc was used:
+
+#base <- read.delim("base_data.txt")
+#head(base)
+#class(base)
+#base_rows<-grep("rs11595021",base)
+
+#Examining data again:
+head(pheno.qc)
+head(geno.qc)
+head(family)
+head(annotation)
+class(annotation)
+class(pheno.qc)
+class(geno.qc)
+str(geno.qc)
+
+
+# According to SNPassoc DOcumentation website:
+# Genotypes are stored in the SnpMatrix as 0, 1, 2 or 3 where 0 = missing,
+# 1 = "0/0", 2 = "0/1" or "1/0" and 3 = "1/1". In SnpMatrix terminology, "A" 
+# is the reference allele and "B" is the risk allele. Equivalent statements 
+# to those made with 0 and 1 allele values would be 0 = missing, 1 = "A/A", 2 = "A/B" or "B/A" 
+# and 3 = "B/B".When working with genome scale data the term reference allele refers to the base that is found in the 
+# reference genome. Since the reference is just somebody's genome, it is not always the major allele. 
+# In contrast, the alternative allele refers to any base, other than the reference, that is found at that locus.
+#Therefore, either the reference allele or the alternative allele can be major allele, depending on its frequency.
+#BASED ON OBSERVED VALUES OF A reference alleles and B risk allele, for all selected 4 SNPS having
+#significant association with DISEASE_STATUS, we assume that the more "frequent" B risk allele is 
+#the major (dominant) allele and that the less frequent A reference allele is the minor (recessive) allele:
+
+
+# test0<-geno.qc[1:6,"rs11595021"]
+# test1<-as.numeric(geno.qc[1:50,"rs11595021"])
+# test2<-as.character(geno.qc[1:50,"rs11595021"])
+# test3<-as.data.frame(geno.qc[1:50,"rs11595021"])
+# test4<-coerce(geno.qc[1:50,"rs11595021"],to="numeric")
+# test5<-coerce(geno.qc[1:50,"rs11595021"],to="data.frame")
+# test6<-as(geno.qc[1:50,"rs11595021"], class("data.frame"))
+
+test7<-as(geno.qc[,c("rs11595021","rs7157639","rs2075650","rs8141950")], class("data.frame"))
+head(test7)
+
+#Now modifying test7 matrix by converting it to data frame:
+class(test7)
+#[1] "matrix" "array" 
+#Making back-up copy of dataframe
+test7.copy5<-as.data.frame(test7)
+
+class(test7.copy5)
+head(test7.copy5)
+
+#Split 'player' column using '/' as the delimiting separator
+
+test7.copy5[c('rs11595021_LeftAllele', 'rs11595021_RightAllele')] <- str_split_fixed(test7.copy5[,1], '/', 2)
+test7.copy5[c('rs7157639_LeftAllele', 'rs7157639_RightAllele')] <- str_split_fixed(test7.copy5[,2], '/', 2)
+test7.copy5[c('rs2075650_LeftAllele', 'rs2075650_RightAllele')] <- str_split_fixed(test7.copy5[,3], '/', 2)
+test7.copy5[c('rs8141950_LeftAllele', 'rs8141950_RightAllele')] <- str_split_fixed(test7.copy5[,4], '/', 2)
+head(test7.copy5)
+dim(test7.copy5)
+
+#Replace A and B alleles of genotype dataframe with major and minor alleles from annotation dataframe:
+
+#Checking dataframes
+head(annotation1)
+dim(annotation1)
+
+
+#Subset, Modify and backup annotation1 dataframe:
+
+annotation1<-annotation[c("rs11595021","rs7157639","rs2075650","rs8141950"),]
+annotation1
+
+
+#Based on the following reference:
+#https://manpages.ubuntu.com/manpages/jammy/man1/plink1.9.1.html
+#https://zzz.bwh.harvard.edu/plink/data.shtml
+#https://www.cog-genomics.org/plink/1.9/formats#:~:text=Allele%201%20(corresponding%20to%20clear,bed%3B%20usually%20major)
+#For .bim (PLINK extended MAP file) and annotation dataframe, 
+#Allele 1 (corresponding to clear bits in .bed; usually minor)
+#Allele 2 (corresponding to set bits in .bed; usually major)
+#Allele codes: By default, the minor allele is coded A1 and the major allele is coded A2 
+#This is used in many output files, e.g. from --freq or --assoc.
+#Therefore, column Allele.1 is renamed Minor Allele and column Allele.2 is renamed Major Allele:
+
+colnames(annotation1)[5] <-"Minor_allele"
+colnames(annotation1)[6]<-"Major_allele"
+
+#Checking:
+annotation1
+class(annotation1)
+
+#Replacing B (major/frequent) allele and A (minor/infrequent)allele of genotype dataframe with corresponding
+#allele.2 (major) and allele.1 (minor) values form annotation dataframe:
+#(Note: In retrospect, this should have been done with a nested for-loop or more efficient apply functions on vectors )
+
+test7.copy5$rs11595021_LeftAllele[test7.copy5$rs11595021_LeftAllele == "B"] <- annotation1[1,6]
+test7.copy5$rs11595021_LeftAllele[test7.copy5$rs11595021_LeftAllele == "A"] <- annotation1[1,5]
+test7.copy5$rs11595021_RightAllele[test7.copy5$rs11595021_RightAllele == "B"] <- annotation1[1,6]
+test7.copy5$rs11595021_RightAllele[test7.copy5$rs11595021_RightAllele == "A"] <- annotation1[1,5]
+
+test7.copy5$rs7157639_LeftAllele[test7.copy5$rs7157639_LeftAllele == "B"] <- annotation1[2,6]
+test7.copy5$rs7157639_LeftAllele[test7.copy5$rs7157639_LeftAllele == "A"] <- annotation1[2,5]
+test7.copy5$rs7157639_RightAllele[test7.copy5$rs7157639_RightAllele == "B"] <- annotation1[2,6]
+test7.copy5$rs7157639_RightAllele[test7.copy5$rs7157639_RightAllele == "A"] <- annotation1[2,5]
+
+test7.copy5$rs2075650_LeftAllele[test7.copy5$rs2075650_LeftAllele == "A"] <- annotation1[3,5]
+test7.copy5$rs2075650_LeftAllele[test7.copy5$rs2075650_LeftAllele == "B"] <- annotation1[3,6]
+test7.copy5$rs2075650_RightAllele[test7.copy5$rs2075650_RightAllele == "B"] <- annotation1[3,6]
+test7.copy5$rs2075650_RightAllele[test7.copy5$rs2075650_RightAllele == "A"] <- annotation1[3,5]
+
+test7.copy5$rs8141950_LeftAllele[test7.copy5$rs8141950_LeftAllele == "B"] <- annotation1[4,6]
+test7.copy5$rs8141950_LeftAllele[test7.copy5$rs8141950_LeftAllele == "A"] <- annotation1[4,5]
+test7.copy5$rs8141950_RightAllele[test7.copy5$rs8141950_RightAllele == "B"] <- annotation1[4,6]
+test7.copy5$rs8141950_RightAllele[test7.copy5$rs8141950_RightAllele == "A"] <- annotation1[4,5]
+
+#Checking:
+head(test7.copy5)
+dim(test7.copy5)
+
+#Now eliminate first 4 columns:
+test7.copy5 <- test7.copy5[-c(1:4)]
+head(test7.copy5)
+
+#Now merge left and right allele columns:
+test7.copy5$rs11595021 = paste(test7.copy5$rs11595021_LeftAllele, test7.copy5$rs11595021_RightAllele, sep="")
+test7.copy5$rs7157639 = paste(test7.copy5$rs7157639_LeftAllele, test7.copy5$rs7157639_RightAllele, sep="")
+test7.copy5$rs2075650 = paste(test7.copy5$rs2075650_LeftAllele, test7.copy5$rs2075650_RightAllele, sep="")
+test7.copy5$rs8141950 = paste(test7.copy5$rs8141950_LeftAllele, test7.copy5$rs8141950_RightAllele, sep="")
+head(test7.copy5)
+
+#Now eliminate the first 8 columns
+test7.copy5 <- test7.copy5[-c(1:8)]
+head(test7.copy5)
+class(test7.copy5)
+dim(test7.copy5)
+
+#Now combine the pheno.qc dataframe with test7.copy5 dataframe:
+class(pheno.qc)
+dim(pheno.qc)
+head(pheno.qc)
+combined <- cbind(test7.copy5, pheno.qc)
+combined <- cbind(pheno.qc,test7.copy5)
+class(combined)
+head(combined)
+str(combined)
+
+#To start the analysis, we must indicate which columns of the dataset asthma contain the SNP data, using the setupSNP function.
+#However, to otherwise avoid the following error: Error in FUN(X[[i]], ...) : SNP must have only two alleles
+#Therefore, checking all unique SNP values in dataframe:
+
+unique(combined$rs11595021)
+#[1] "CC" "AC" "AA" "NA"
+unique(combined$rs7157639)
+#[1] "CC" "TC" "TT" "NA"
+unique(combined$rs2075650)
+#[1] "GG" "AG"
+unique(combined$rs8141950)
+#[1] "CC" "TC" "NA" "TT"
+
+#Therefore, eliminating all rows with NAs in combined dataframe to avoid errors:
+dim(combined)
+combined_NO_NA <- na.omit(combined)
+combined_NO_NA<-combined[!combined$rs11595021 == "NA", ]
+combined_NO_NA<-combined_NO_NA[!combined_NO_NA$rs7157639 == "NA", ]
+combined_NO_NA<-combined_NO_NA[!combined_NO_NA$rs2075650 == "NA", ]
+combined_NO_NA<-combined_NO_NA[!combined_NO_NA$rs8141950 == "NA", ]
+
+#Checking:
+
+dim(combined_NO_NA)
+head(combined_NO_NA)
+
+#To start the analysis, we must indicate which columns of the dataset asthma contain the SNP data, using the setupSNP function. 
+#In our example, SNPs columns have a distinct name starting with "rs", which we specify in argument colSNPs.
+#We therefore determine the columns containing the SNPs as follows:
+idx <- grep("^rs", colnames(combined_NO_NA))
+
+# The argument sep indicates the character separating the alleles. The default value is ’‘/´´. In our case, there 
+# is no separating character, so that, we set sep="". The argument name.genotypes can be used when genotypes are 
+# available in other formats, such as 0, 1, 2 or’‘norm´´,’‘het´´,’’mut´´. The purpose of the setupSNP function is 
+# to assign the class snp to the SNPs variables, to which SNPassoc methods will be applied. 
+# The function labels the most common genotype across subjects as the reference one. 
+# When numerous SNPs are available, the function can be parallelized through the argument mc.cores that 
+# indicates the number of processors to be used. 
+
+combined.s <- setupSNP(data=combined_NO_NA, colSNPs=idx, sep="")
+
+#Verifying that the SNP variables are given the new class snp by focusing and using 1 of the 4 selected SNPs as an example:
+head(combined.s$rs11595021)
+# [1] C/C C/C C/C C/C C/C A/C
+# Genotypes: C/C A/C A/A
+# Alleles:  C A 
+class(combined.s$rs11595021)
+#[1] "snp"    "factor"
+
+#We also visualize the results in a plot:
+plot(combined.s$rs11595021)
+
+#Obtaining example pie chart
+plot(combined.s$rs11595021, type=pie)
+
+#The summary function can also be applied to the whole dataset showing the SNP labels 
+#with minor/major allele format, the major allele frequency the HWE test and the percentage of missing genotypes.
+#We summarize their content with summary which shows the genotype and allele frequencies for a given SNP,
+#testing for Hardy-Weinberg equilibrium (HWE).
+
+summary(combined.s, print=FALSE)
+# alleles major.allele.freq HWE      missing (%)
+# rs11595021 C/A     89.8              0.544517 0          
+# rs7157639  C/T     87.9              0.604758 0          
+# rs2075650  G/A     70.7              0.000000 0          
+# rs8141950  C/T     92.9              0.249194 0 
+
+#Missing values can be further explored via plotting.
+#This plot was used to inspect if missing values appear randomly across individuals and SNPs
+plotMissing(combined.s, print.labels.SNPs = FALSE)
+
+# Warning message:
+#   In `[.data.frame`(x, colSNPs, drop = FALSE) :
+#   'drop' argument will be ignored
+
+
+#Genotyping of SNPs needs to pass quality control measures. Aside from technical details that need to be considered for filtering SNPs 
+#with low quality, genotype calling error can be detected by a HWE test. The test compares the observed genotype frequencies with those 
+#expected under random mating, which follows when the SNPs are in the absence of selection, mutation, genetic drift, or other forces. 
+#Therefore, HWE must be checked only in controls. There are several tests described in the literature to verify HWE. 
+#In SNPassoc HWE is tested for all the bi-allelic SNP markers using a fast exact test (Wigginton, Cutler, and Abecasis 2005) 
+#implemented in the tableHWE function.
+
+hwe <- tableHWE(combined.s)
+head(hwe)
+# HWE (p value)
+# rs11595021     0.5445172
+# rs7157639      0.6047576
+# rs2075650             NA
+# rs8141950      0.2491936
+
+#We observe that the first SNPs in the dataset are under HWE since their P-values 
+#rejecting the HWE hypothesis (null hypothesis) are larger than 0.05. However, when 
+#tested in control samples only, by stratifying by cases and controls
+
+hwe2 <- tableHWE(combined.s, DISEASE_STATUS)
+
+#Association
+#For further evaluation, we analyze the regression modeling of
+#only 1 of these 4 SNPs for illustration. The association analysis for all genetic models is performed by the function association that regresses 
+#DISEASE_STATUS on the variable  from the dataset combined.s that already contains the SNP variables of class snp.
+
+association(DISEASE_STATUS ~ rs11595021, data = combined.s)
+association(DISEASE_STATUS ~ rs7157639, data = combined.s)
+association(DISEASE_STATUS ~ rs2075650, data = combined.s)
+association(DISEASE_STATUS ~ rs8141950, data = combined.s)
+
+
+#For multiple SNP data, our objective is to identify the variants that are significantly associated with the trait.
+#The most basic strategy is, therefore, to fit an association test like the one described above for each of the SNPs in the 
+#dataset and determine which of those associations are significant. The massive univariate testing is the most widely used analysis 
+#method for omic data because of its simplicity. In SNPassoc, this type of analysis is done with the function WGassociation.
+#Here, only the outcome is required in the formula argument (first argument) since the function successively calls association 
+#on each of the variables of class snp within data. The function returns the P-values of association of each SNP under each genetic model. 
+#SNPassoc is computationally limited on large genomic data. 
+
+ans <- WGassociation(DISEASE_STATUS, combined.s)
+ans
+
+# comments codominant dominant recessive overdominant log-additive
+# rs11595021        -      0e+00  0.00017   0.00001      0.01212        0e+00
+# rs7157639         -      1e-05  0.00000   0.29010      0.00001        1e-05
+# rs2075650         -      0e+00        -         -            -            -
+# rs8141950         -      0e+00  0.00000   1.00000      0.00000        0e+00
+
+##Obtaining SNP name that is significant 
+sig.level <- 0.05/2.2 # correct for the use of multiple genetic models
+snp <- apply(ans, 1, function(x)  any(x < sig.level & !is.na(x)))
+snp
+
+# rs11595021  rs7157639  rs2075650  rs8141950 
+# TRUE       TRUE       TRUE       TRUE 
+
+#Evidently, all 4 SNPs that pre-determined to have statistically significant association with ADNI DISEASE_STATUS using SNPStats package function snp.rhs.tests
+#are also shown to be significant here. 
+
+#The P-values obtained from massive univariate analyses are visualized with the generic plot function
+#This produces a Manhattan plot of the -log10(P-values) for all the SNPs over all models.
+# It shows the nominal level of significance and the Bonferroni level, which is the level 
+# corrected by the multiple testing across all SNPs. The overall hypothesis of 
+# massive univariate association tests is whether there is any SNP that is significantly 
+# associated with the phenotype. As multiple SNPs are tested, the probability of finding 
+# at least one significant finding increases if we do not lower the significance threshold. 
+# The Bonferroni correction lowers the threshold by the number of SNPs tested (0.0001=0.05/51). 
+# In the Manhattan plotof our analysis, we see that no SNP is significant at the Bonferroni level, 
+# and therefore there is no SNP that is significantly associated with ADNI DISEASE_STATUS.
+
+plot(ans)
+
+# THE FOLLOWING CODE AUTHORED BY UViC's Dr. Bustamente and Dr. N-Telejor FOR MODIFIED MANHATTAN PLOT was not used but 
+#is included for future reference:
+
+# plot.WGassociation <- function(x, ...){
+#   if (!inherits(x, "WGassociation")) 
+#     stop("x must be an object of class 'WGassociation'")
+#   
+#   xx <- data.frame(SNP=rownames(x), data.frame(x)[,2:4])
+#   names(xx)[4] <- "additive"
+#   dat <- tidyr::gather(xx, key="model", value="p.value", -"SNP")
+#   dat$model <- factor(dat$model, 
+#                       levels=c("dominant",
+#                                "recessive",
+#                                "additive"))
+#   
+#   plt <- ggplot(dat, aes(x=dat$SNP, y=-log10(dat$p.value))) + 
+#     geom_point() +
+#     xlab("SNPs") + ylab(expression(-log[10]("p-value"))) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#     geom_hline(aes(yintercept = -log10(0.05), 
+#                    linetype = "Nominal"), 
+#                colour="blue") +
+#     geom_hline(aes(yintercept = -log10(0.05/nrow(xx)),
+#                    linetype = "Bonferroni"), 
+#                colour="red") +
+#     scale_linetype_manual(name = "Significance", values = c(2, 2), 
+#                           guide = guide_legend(override.aes = list(color = c("red", "blue"))))
+#   
+#   plt + facet_wrap( ~ model, ncol=1) +
+#     theme(strip.text.x = element_text(face="bold")) +
+#     theme(legend.position="top", legend.direction="horizontal") 
+# }
+
+#Covariates were introduced in the global association model for 4 selected SNPs as was done before for original geno.qc dataframe containing all SNPs.
+ans.adj <- WGassociation(DISEASE_STATUS ~ YEARS_EDUCATION + X1 + X2, combined.s)
+head(ans.adj)
+
+
+# Maximum-statistic used to test association between ADNI DISEASE_STATUS and SNPs.
+#Computing the p-values using MAX-statistic for all 4 selected SNPs:
+ans.max <- maxstat(combined.s, DISEASE_STATUS)
+ans.max
+
+#Information for specific association models for given SNPs can also be retrieved with WGstats
+infoTable <- WGstats(ans)
+
+#Using the odds function according to SNPassoc documentation at: https://www.rdocumentation.org/packages/SNPassoc/versions/2.1-0/topics/odds
+#Format: odds(x, model=c("log-additive", "dominant", "recessive", "overdominant", "codominant"), sorted=c("no","p-value","or"))
+#The coefficient is the change in log-odds for a one unit decrease (because homozygous major allele is coded 1) in the number of copies 
+#of the minor allele.Repeating again the execution of WGassociation function:
+
+ans.additive<-WGassociation(DISEASE_STATUS~1,data=combined.s,model=c("log-additive"))
+or.additive<-odds(ans.additive,model=c("log-additive"))
+or.additive
+# OR lower upper p-value.log-additive
+# rs11595021 2.29  1.61  3.26         2.916963e-07
+# rs7157639  2.14  1.54  2.98         6.404617e-06
+# rs2075650  2.58  1.80  3.69         8.159943e-08
+# rs8141950  0.22  0.11  0.45         1.318966e-06
+
+pvalue.additive<-c("2.916963e-07","6.404617e-06","8.159943e-08","1.318966e-06")
+
+ans.dominant<-WGassociation(DISEASE_STATUS~1,data=combined.s,model=c("dominant"))
+ans.dominant
+or.dominant<-odds(ans.dominant,model="dominant")
+or.dominant
+# OR lower upper p-value.dominant
+# rs11595021 2.12  1.44  3.12     1.689895e-04
+# rs7157639  2.44  1.69  3.51     2.394380e-06
+# rs2075650    NA    NA    NA               NA
+# rs8141950  0.22  0.11  0.44     5.256176e-07
+
+pvalue.dominant<-c("1.689895e-04","2.394380e-06","NA","5.256176e-07")
+
+ans.recessive<-WGassociation(DISEASE_STATUS~1,data=combined.s,model=c("recessive"))
+ans.recessive
+or.recessive<-odds(ans.recessive,model="recessive")
+or.recessive
+
+# OR lower upper p-value.recessive
+# rs11595021  NA   0.0    NA      8.069433e-06
+# rs7157639  1.9   0.6  6.05      2.901018e-01
+# rs2075650   NA    NA    NA                NA
+# rs8141950  0.0   0.0    NA      1.000000e+00
+
+pvalue.recessive<-c("8.069433e-06","2.901018e-01","NA","1.000000e+00")
+
+ans.all<-WGassociation(DISEASE_STATUS~1,data=combined.s,model=c("log-additive", "dominant", "recessive", "overdominant", "codominant"))
+or.all<-odds(ans.all,model=c("log-additive", "dominant", "recessive", "overdominant", "codominant"))
+or.all
+
+
+# OR lower upper p-value.log-additive
+# rs11595021 2.29  1.61  3.26         2.916963e-07
+# rs7157639  2.14  1.54  2.98         6.404617e-06
+# rs2075650  2.58  1.80  3.69         8.159943e-08
+# rs8141950  0.22  0.11  0.45         1.318966e-06
+
+pvalue.all<-c("2.916963e-07","6.404617e-06","8.159943e-08","1.318966e-06")
+
+#CREATING DATA.FRAME RESULTS TABLE 
+#The table is to include the 4 selected SNPs with a adjusted p-value < 10-6 (not 10^-8), its chromosome, genomic position, minor allele, 
+#minor allele frequency, the annotated gene, the OR under dominant, recessive and additive model, as well as other attributes:
+#We start by creating a back-up copy and modifying previous annotation1 dataframe:
+
+results.table<-annotation1
+#Moving snp.name column to front of dataframe
+results.table %>% relocate(snp.name)
+
+#Now creating new columns as vectors with values:
+
+#Column OR_dominant:
+or.dominant$OR
+#Column OR_recessive:
+or.recessive$OR
+#Column OR_additive:
+or.additive$OR
+
+#Column pvalue_dominant:
+#or.dominant$p-value.dominant
+pvalue.dominant
+
+#Column pvalue_recessive:
+#or.recessive$p-value.recessive
+pvalue.recessive
+
+#Column pvalue_additive:
+#or.additive$p-value.log-additive 
+pvalue.additive
+  
+#Column major_allele_frequency:
+
+sum.snp<-summary(combined.s, print=FALSE)
+major_allele_frequency<-sum.snp$major.allele.freq
+
+#Column minor_allele_frequency:
+minor_allele_frequency<-100-major_allele_frequency
+
+#COLUMN ANNOTATED GENE:
+
+SNPids <- c("rs11595021", "rs7157639","rs2075650","rs8141950")
+
+# To show which marts are available
+listMarts()
+
+#We need the SNP mart
+mart <- useMart("ENSEMBL_MART_SNP")
+
+#Find homo sapiens
+listDatasets(mart)
+
+#Dataset  to use
+dataset <- useDataset("hsapiens_snp", mart=mart)
+
+# Show available filters
+listFilters(dataset)
+
+#List all available attributes
+listAttributes(dataset)
+
+# To get the ensembl gene id belonging to the SNPs
+gene.results<-getBM(attributes=c('refsnp_id', 'ensembl_gene_stable_id'), filters = 'snp_filter', values = SNPids, mart = dataset)
+
+annotated_gene<-gene.results$ensembl_gene_stable_id
+annotated_gene
+
+# listMarts()
+# mart.snp <- useMart("snp", "hsapiens_snp")
+# 
+# getENSG1 <- function(rs = "rs11595021", mart = mart.snp) {
+#   results <- getBM(attributes = c("refsnp_id", "ensembl_gene_stable_id"),
+#                    filters    = "snp_filter", values = rs, mart = mart)
+#   return(results)
+# }
+# 
+# getENSG2 <- function(rs = "rs7157639", mart = mart.snp) {
+#   results <- getBM(attributes = c("refsnp_id", "ensembl_gene_stable_id"),
+#                    filters    = "snp_filter", values = rs, mart = mart)
+#   return(results)
+# }
+# 
+# getENSG3 <- function(rs = "rs2075650", mart = mart.snp) {
+#   results <- getBM(attributes = c("refsnp_id", "ensembl_gene_stable_id"),
+#                    filters    = "snp_filter", values = rs, mart = mart)
+#   return(results)
+# }
+# 
+# getENSG4 <- function(rs = "rs8141950", mart = mart.snp) {
+#   results <- getBM(attributes = c("refsnp_id", "ensembl_gene_stable_id"),
+#                    filters    = "snp_filter", values = rs, mart = mart)
+#   return(results)
+# }
+# 
+# getENSG1()
+
+#Adding tables to dataframe:
+results.table <- cbind(results.table, or.dominant$OR)
+results.table <- cbind(results.table, or.recessive$OR)
+results.table <- cbind(results.table, or.additive$OR)
+
+
+results.table <- cbind(results.table, pvalue.dominant)
+results.table <- cbind(results.table, pvalue.recessive)
+results.table <- cbind(results.table, pvalue.additive)
+
+
+results.table <- cbind(results.table, major_allele_frequency)
+results.table <- cbind(results.table, minor_allele_frequency)
+results.table <- cbind(results.table, annotated_gene)
+
+results.table
+
+
+#Creating a genetic score by combining the SNPs considered more appropriate and assessing its performance in an association model
+#Preparing data again, this time removing snp.name column from annotation:
+
+
+#Performing association analysis:
+ans.score <- WGassociation(DISEASE_STATUS, combined.s, model="log-add")
+
+#Selecting SNPs at single level:
+sel2 <- labels(combined.s)[additive(ans.score)<0.1] #Following recommendations
+sel2 <- labels(combined.s) #For working with a moderate number of SNPs
+sel2
+
+combined.sel <- combined.s[,sel2]
+head(combined.sel)
+
+combined.sel <- data.frame(lapply(combined.sel, additive))
+trait <- as.numeric(as.factor(combined.s$DISEASE_STATUS)) - 1 
+table(trait)
+
+table(combined.s$DISEASE_STATUS)
+
+dd.end <- data.frame(casecontrol=trait, combined.sel)
+head(dd.end)
+
+dd.end.complete <- dd.end[complete.cases(dd.end),]
+dim(dd.end)
+
+dim(dd.end.complete)
+
+mod <- stepAIC(glm(casecontrol ~ ., dd.end.complete,family="binomial"),method="forward", trace=0)
+summary(mod)
+
+#Selecting the SNPs to create the genetic score:
+snps.score <- names(coef(mod))[-1]
+snps.score
+
+#Selecting the position of the SNPs in the data.frame:
+pos <- which(names(dd.end.complete)%in%snps.score)
+names(dd.end.complete)
+
+pos
+
+#Computing the genetic score:
+score <- riskScore(mod, data=dd.end.complete, cGenPreds=pos,Type="unweighted")
+table(score)
+
+
+#Histogram of the score distribution:
+hist(score, col="red")
+
+#Assessing the association of the genetic score with ADNI disease status:
+mod.lin <- glm(casecontrol ~ score, dd.end.complete,family="binomial")
+summary(mod.lin)
+
+ans2
+
+exp(coef(mod.lin)[2])
+
+#Evaluating model performance:
+predrisk <- predRisk(mod.lin, dd.end.complete)
+plotROC(data=dd.end.complete, cOutcome=1,predrisk = predrisk)
+
+
+
+#Alternative code not used in GWAS study analysis:
+#PLINK was used in place of GAPIT, TORREL for loading and modeling data.GWAS association analysis was also not performed with GWAA() function 
+#GWAA(genodata=genotype, phenodata=phenoSub, filename=gwaa.fname). Michigan Imputation R Code available at:  was not used
+#dir.create("./outputIMP/",showWarnings=FALSE) to test on additional SNPs from genotype imputation.The main idea behind imputation is to predict (or ‘impute’) the 
+#missing data based upon the observed data. Imputation is now routinely used to facility genotyped studies by increasing the power of 
+#the analysis. 
+
+
+
+
+
+
+
+
+
+
+```
+
+
+THANK YOU VERY MUCH FOR YOUR CONSIDERATION
+
+

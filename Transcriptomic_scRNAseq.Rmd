@@ -1,0 +1,340 @@
+---
+title: "Transcriptomic_scRNA-seq_Data_Analysis"
+date: "`r format(Sys.time(), '%d %b %Y')`"
+output:
+  BiocStyle::html_document:
+    theme: spacelab
+    number_sections: yes
+    toc_float: yes
+    toc_depth: 3
+ 
+
+---
+<style type="text/css">
+
+h1.title {
+  text-align: center;
+  margin-top: 60px;
+  margin-bottom: 30px;
+}
+h4.author {
+  text-align: center;
+}
+h4.date {
+  text-align: center;
+}
+
+img + em {
+    display: inherit;
+    text-align: center;
+    font-size: 8pt;
+    color: #1a81c2;
+    font-style: inherit;
+    font-weight: bold;
+}
+
+.table {
+    max-width: 600px;
+}
+
+</style>
+---
+
+```{r opts, include = FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                       out.width.px = 50, out.height.px=50)
+
+```
+
+# Objectives
+
+This practical covers the basic bioinformatics analysis of single cell RNA-seq (scRNA-seq)  in R. Best practices can be reviewed at [Luecken et al.](https://pubmed.ncbi.nlm.nih.gov/31217225/)
+
+```{r fig1, fig.align="center", out.width = "80%", echo = FALSE}
+
+knitr::include_graphics("scRNAseq.png")
+
+```
+
+Let's load needed packages
+
+```{r setup, include = TRUE}
+
+wd <- getwd()
+
+#### Libraries #####
+#general purposes
+library(readxl)
+library(tidyverse)
+library(GEOquery)
+
+#Libraries to make reports
+library(knitr)
+library(kableExtra)
+
+library(Seurat)
+library(SingleR)
+library(celldex)
+
+```
+
+# Sample data
+
+We will analyze some 10x Genomics data, which was previously processed through Cell Ranger to obtain the count matrix.
+
+The data was obtained from GEO:
+[GSE123813](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE123813). Squamous cell carcinoma (scc) samples, pre- and post-anti-PD-1 therapy are downloaded using package `r Biocpkg("GEOquery")`. Depending on how data are organized in GEO files could be stored in different formats.
+
+In this case, two files are needed, the metadata and the count data. Seurat provides different functions to load the data in our R session and create a Seurat object
+
+```{r download data, eval = FALSE}
+
+gseid="GSE123813"
+GEO <- getGEOSuppFiles(gseid, fetch_files = F)
+getGEOSuppFiles(gseid, makeDirectory = T, filter_regex="_scc_metadata")
+getGEOSuppFiles(gseid, makeDirectory = T, filter_regex="_scc_scRNA_counts")
+
+```
+
+Let's now create the Seurat object, loading both data sets and using function CreateSeuratObject(). Once created data will be stored as an RData object for future runs.
+
+```{r seurat object, eval = FALSE}
+
+metadata <- data.table::fread(file.path(wd,gseid,"GSE123813_scc_metadata.txt.gz"))
+expression_data <- read.table(file.path(wd,gseid,"GSE123813_scc_scRNA_counts.txt.gz"),
+                              header=TRUE, row.names=1, sep="\t", check.names=FALSE)
+#not in the same order...
+expression_data <- expression_data[,metadata$cell.id]
+
+# length(intersect(metadata$cell.id,colnames(expression_data)))
+all.equal(metadata$cell.id,colnames(expression_data))
+#the same but not in the same order
+
+scc <- CreateSeuratObject(counts=expression_data, project="GSE123813", metadata=metadata)
+scc@meta.data$cluster <- metadata$cluster
+scc@meta.data$patient <- metadata$patient
+scc@meta.data$treatment <- metadata$treatment
+
+save(scc,file="GSE123813.raw.seurat.RData")
+
+```
+
+# The Seurat object
+
+Once loaded, the scc is a Seurat object. We can access its components using @. The most important components are:
+
+- assays: contains assays with counts tables and the different normalized sets.
+- meta.data: contains the barcode (sample cells) variables
+
+```{r load}
+
+load(file="GSE123813.raw.seurat.RData")
+scc
+
+scc@assays
+head(scc@meta.data)
+
+table(scc$patient, scc$treatment)
+
+```
+
+
+
+# QC
+
+Quality control is usually based on three measures:
+
+- **The number of unique genes detected in each cell**, Low-quality or empty droplets will often have very few genes whereas cell doublets or multiplets may exhibit an aberrantly high gene count
+- **The total number of molecules detected within a cell**, which correlates strongly with unique genes
+- **The percentage of reads that map to the mitochondrial genome**, Low-quality / dying cells often exhibit extensive mitochondrial contamination
+
+To identify mitochondrial genes we first have to identify them.
+
+```{r MT}
+
+#mitochondrial genes
+grep("MT-",rownames(scc), value=T)
+
+```
+And then we use function VlnPlot() to create violin plots for these measures.
+
+```{r vlnplots}
+
+scc[["percent.mt"]] <- PercentageFeatureSet(scc, pattern = "^MT-")
+VlnPlot(scc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"))
+
+```
+
+Let's aggregate by treatment
+
+```{r vlnplots tto}
+
+VlnPlot(scc, features=c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "treatment" )
+
+```
+
+In this data set, filtering had already been performed. Cells with less than 200 genes detected or greater than 10% mitochondrial RNA content were excluded from analysis. 
+
+FeatureScatter() is typically used to visualize feature-feature relationships, but can be used for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
+
+```{r QC featureScatter}
+
+plot2 <- FeatureScatter(scc, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot2
+
+```
+In this case, the number of features and counts by cell are very correlated.
+
+# Preprocessing
+
+After checking for QC and filtering the unwanted cells, several steps are taken:
+
+1. Normalization
+2. Find most variable features
+3. Scaling
+4. Dimension reduction (PCA)
+
+
+By default, we employ a global-scaling normalization method “LogNormalize” that normalizes the feature expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result. Normalized values are obtained with function NormalizeData() and stored in the assay RNA, accessible through scc[["RNA"]]@data.
+
+We next calculate a subset of features that exhibit high cell-to-cell variation in the dataset (i.e, they are highly expressed in some cells, and lowly expressed in others). This is obtained by modeling the mean-variance relationship inherent in single-cell data, and is implemented in the FindVariableFeatures() function. By default, we return 2,000 features per dataset which will be used in downstream analysis, like PCA.
+
+Next, we apply a linear transformation (‘scaling’) that is a standard pre-processing step prior to dimensional reduction techniques like PCA. The ScaleData() function.
+
+Next we perform PCA on the scaled data. By default, only the previously determined variable features are used as input. Seurat provides several useful ways of visualizing both cells and features that define the PCA, including VizDimReduction(), DimPlot(), and DimHeatmap(). One of the key points in this step is how many components are to be selected. There are different methods to estimate the best number of components, the elbow method is probably the most known, which can be run using function ElbowPlot()
+
+
+```{r normalization}
+
+scc <- NormalizeData(scc, normalization.method = "LogNormalize", scale.factor = 10000)
+scc <- FindVariableFeatures(scc, selection.method = "vst", nfeatures = 2000)
+scc <- ScaleData(scc)
+scc <- RunPCA(scc, features = VariableFeatures(object = scc))
+
+ElbowPlot(scc)
+
+```
+
+16 dimensions were selected in this case by authors
+
+# Clustering
+
+We first construct a KNN graph based on the euclidean distance in the PCA space, and refine the edge weights between any two cells based on the shared overlap in their local neighborhoods (Jaccard similarity). This step is performed using the FindNeighbors() function.
+
+The FindClusters() function implements the clusters of the cells, and contains a resolution parameter that sets the ‘granularity’ of the downstream clustering, with increased values leading to a greater number of clusters.
+
+Seurat offers several non-linear dimensional reduction techniques, such as tSNE and UMAP, to visualize and explore these datasets. We will create a UMAP to see how the cells colocalize. We usually work with the number of principal components selected (in this case 16).
+
+```{r clusters}
+
+scc <- FindNeighbors(scc, dims = 1:16)
+scc <- FindClusters(scc, resolution = 0.3, ident="cluster") #resolution=0.3, reported by authors
+
+scc <- RunUMAP(scc, n.neighbors=20L, min.dist=0.3, dims = 1:16)
+
+```
+
+One of the informations in the metadata is the cell type. Usually we will have to annotate the clusters and there are different approaches that can be applied, we will see this below but for the moment we use the information contained in the metadata
+
+```{r original clus}
+
+DimPlot(scc, reduction = "umap", group.by="cluster")
+
+```
+
+This can also be studied by patient
+
+```{r by patient}
+
+DimPlot(scc, reduction = "umap", split.by="patient", group.by="cluster")
+
+```
+
+Or by treatment
+
+```{r by treatment}
+
+DimPlot(scc, reduction = "umap", split.by="treatment", group.by="cluster")
+
+```
+
+# Cluster annotation
+
+The main purpose in this step is to give a meaningful biological label to each cluster. This is usually defined by the marker genes that characterize each cluster. 
+It is a rather manual process in many situations, where the highly expressed genes are obtained in each cluster. Annotating clusters relies on using external sources of information describing the expected expression profiles of individual cell identities. There is an increasing number of sources available. 
+
+To annotate clusters, we will use the `r Biocpkg("SingleR")` method, which can use different cell references. `r Biocpkg("Celldex")` provides many [cell references](https://bioconductor.org/packages/devel/data/experiment/vignettes/celldex/inst/doc/userguide.html). In this example we will use the data from the Immunological Genome Project (ImmGen). 
+
+SingleR identifies marker genes from the reference and uses them to compute assignment scores (based on the Spearman correlation across markers) for each cell against each label in the reference. The label with the highest score is the assigned to the test cell, possibly with further fine-tuning to resolve closely related labels.
+
+
+```{r singleR_celldex}
+
+ref = celldex::ImmGenData()
+
+pred_clust <- SingleR(test=as.SingleCellExperiment(scc), ref=ref,
+  clusters = scc$seurat_clusters, labels=ref$label.fine)
+table(pred_clust$labels)
+
+scc$immgen_clust <- scc$seurat_clusters
+levels(scc$immgen_clust) <- pred_clust$labels
+
+```
+
+Let's see how the clusters look like using this annotation
+
+```{r immgen clus}
+
+DimPlot(scc, reduction = "umap", group.by="immgen_clust")
+
+```
+As we can see, the resulting plot is different from the original one. The election of the reference and also of the cluster method has a huge influence on the final results.
+
+# Gene expression
+
+We can study the expression of a gene across cells. Let's see the B-cell receptor as an example.
+
+```{r features, eval=T}
+
+FeaturePlot(scc, features = "BCR", split.by="treatment")
+
+```
+
+# DEA
+
+Differential expression analysis can be applied with different purposes such as:
+
+- Characterizing a cluster
+- Obtaining the differentially expressed genes between conditions 
+
+The main function to perform DEA is FindMarkers(), which uses the Wilcoxon test by default. Other options are also available through parameter test.use.
+
+In this examples we will find all markers distinguishing naives (cluster3) and CD8 naives  (cluster 0 & 1), present in at least 25% of the cells
+
+```{r DE markers}
+
+clusterN.markers <- FindMarkers(scc, ident.1 = 3, ident.2 = c(0, 1), min.pct = 0.25)
+head(clusterN.markers, n = 10)
+
+```
+CD8 markers appear in the list of top genes.
+
+
+Whereas in this example we find genes that are differentially expressed between post and pre treatment sample cells.
+
+```{r DE markers groups}
+
+markers.tto <- FindMarkers(scc, ident.1 = "post", ident.2 ="pre", group.by = 'treatment')
+head(markers.tto, n=10)
+
+```
+Let's take one of the top genes to see the differences
+
+```{r DE marker plot}
+
+FeaturePlot(scc, features = "IGKC", split.by="treatment")
+
+```
+
+# References
