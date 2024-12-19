@@ -1,0 +1,172 @@
+#STUDENT: PIERRE WENSEL
+#COURSE: BIOINFORMATICS - LINUX
+#ASSIGNMENT: BIOINFORMATICS DATABASES EXERCISES
+
+
+#1. UCSC Genome browser 
+#a) Transcript data
+#QUESTION#1: Which is the transcript with more exons?
+#ANSWER: NM_001397211.1 
+
+sort -k9 -n transcripts_full.tsv | tail -1 | awk '{print $2}'
+
+#1. UCSC Genome browser 
+#a) Transcript data
+#QUESTION#2: Create a file with the RefSeq IDs and the Gene names of transcripts at the positive strand.
+
+grep '+' transcripts_full.tsv | awk '{print $1,$2}' > newfile.tsv
+
+#1. UCSC Genome browser
+#b) Differences between reference genome and transcript sequence
+#QUESTION#1: How many lines are in this file?
+#ANSWER: 1208 (NOTE: I DOWNLOADED A COMMA-DELIMITED (NOT TAB-DELIMITED) diffs.tsv FILE FROM UCSC
+
+cat diffs.tsv | wc -l
+
+#1. UCSC Genome browser
+#b) Differences between reference genome and transcript sequence
+#QUESTION#2: We are only interested in columns 4 (type of variant) and 10 transcript ID. Which is the transcript id with more differences with the reference genome?
+#ANSWER: TranscriptIDs NM_001405672.2 and NM_001405677.2 each have tied for most (40) differences with the reference genome
+
+#FOR COMMA-DELIMITED diffs.tsv file:
+
+grep -v "#" diffs.tsv  | awk -F',"' '{print $10}' | sort | uniq -c | sort -nr | awk '(NR==1) || ($1 > max){max=$1; rec=$0} END{if (NR) print rec}'
+
+#FOR TAB-DELIMITED diffs.tsv file:
+
+grep -v "#" diffs.tsv  |cut -f10 -d$'\t' | sort | uniq -c | sort -nr | awk '(NR==1) || ($1 > max){max=$1; rec=$0} END{if (NR) print rec}'
+
+
+#1. UCSC Genome browser
+#b) Differences between reference genome and transcript sequence
+#QUESTION#3: How many transcript ids have more than one annotated difference?
+#ANSWER: 1122
+
+#FOR COMMA-DELIMITED diffs.tsv file:
+
+grep -v "#" diffs.tsv  | awk -F',"' '{print $10}' | sort | awk '{ if (seen[$0]++) { count++; } } END { print count }'
+
+#FOR TAB-DELIMITED diffs.tsv file:
+grep -v "#" diffs.tsv  | cut -f10 -d$'\t' | sort | awk '{ if (seen[$0]++) { count++; } } END { print count }'
+
+#2.OMIM
+#$ wget https://www.omim.org/static/omim/data/mim2gene.txt
+#QUESTION1:
+
+grep -v "#" mim2gene.txt | grep 'gene[^/]' | awk '{print $1}' > mim2gene1.txt
+
+#2.OMIM
+#QUESTION2:
+
+grep -v "#" mim2gene.txt | grep 'gene[^/]' | sort -k4  | awk '{ print $4 }' | grep -v '^$' > mim2gene2.txt
+
+#2.OMIM
+#QUESTION3:
+#ASSUMING THE TOTAL LIST OF GENES WITHOUT ENSG DESIGNATION (EVEN THOSE WITHOUT NAME) IS DESIRED AND CAPTURED VIA OMIM NUMBERS TO ACCOUNT FOR THOSE WITHOUT A GENE NAME:
+
+grep -v "#" mim2gene.txt | grep 'gene[^/]' | grep -v "ENSG" | sort -k1 | awk '{ print $1 }' | grep -v '^$' > mim2gene3.txt
+
+#ASSUMING ONLY LIST OF GENE NAMES WITHOUT ENSG DESIGNATION IS DESIRED:
+
+grep -v "#" mim2gene.txt | grep 'gene[^/]' | grep -v "ENSG" | sort -k4 | awk '{ print $4 }' | grep -v '^$' > mim2gene3.txt
+
+#3.UNIPROT-A
+#QUESTION4
+
+grep '>' paxillin.fasta > paxillin1.fasta
+
+#3.UNIPROT-A
+#QUESTION5
+
+grep -v '>' paxillin.fasta > paxillin2.fasta
+
+#3.UNIPROT-A
+#QUESTION6
+
+awk '/^>/{if(N)exit;++N;} {print;}' paxillin.fasta > paxillin3.fasta
+
+#3.UNIPROT-A
+#QUESTION7
+
+awk 'BEGIN{RS=">"}END{printf "%s",">" $0}' paxillin.fasta > paxillin4.fasta
+
+#3.UNIPROT-A
+#QUESTION8 
+
+grep -A 1 '>' paxillin.fasta | grep -v '^>'| grep -v '\-\-' > paxillin5.fasta
+
+#3.UNIPROT-A
+#QUESTION9
+#ANSWER: First 3 lines for first 3 isoform sequences are identical, and fourth line for isoform 4 sequence is different
+#The following bash script was edited with vi editor, saved, and executed as bash paxillin.sh
+
+#!/bin/bash
+first=`head -2 paxillin5.fasta | uniq | wc -l`
+if [ $first -eq 1 ]
+then
+        echo "Two lines of isoform 1 and 2 are identical"
+else
+        echo "Two lines of isoform 1 and 2 are different"
+fi
+second=`sed '2q;d' paxillin5.fasta`
+third=`sed '3q;d' paxillin5.fasta`
+if [ $second == $third ]
+then
+        echo "Two lines of isoform 2 and 3 are identical"
+else
+        echo "Two lines of isoform 2 and 3 are different"
+fi
+last=`tail -n 2 paxillin5.fasta | uniq | wc -l`
+if [ $last -eq 1 ]
+then
+        echo "Two lines of isoform 3 and 4 are identical"
+else
+        echo "Two lines of isoform 3 and 4 are different"
+fi
+
+#3.UNIPROT-B
+#QUESTION10
+
+grep "^OC[[:space:]]" paxillin.txt|sed -r 's/.{5}//'|sed 's/.$//'|paste -s -d '-' 
+
+#3.UNIPROT-B
+#QUESTION11
+
+grep "PDB[;]" paxillin.txt|sed -r 's/.{10}//' | cut -f1,2 -d';' |sed 's/;//'> paxillin7.txt
+
+#3.UNIPROT-B
+#QUESTION12
+#The following bash script was edited with vi editor, saved, and executed as bash paxillin1.sh
+
+#!/bin/bash
+lc=`grep -A 1 'FT   DOMAIN' paxillin.txt | grep -v '\-\-' | wc -l`
+for ((line=1; line<=$lc ; line++))
+do
+        if [ $((line%2)) -ne 0 ]
+        then
+                oddline=$(grep -A 1 'FT   DOMAIN' paxillin.txt | grep -v '\-\-' | sed -n "$line p" | grep -o "[0-9]\+\.\.[0-9]\+$")
+                echo "$oddline"
+        else
+                eveline=$(grep -A 1 'FT   DOMAIN' paxillin.txt | grep -v '\-\-' | sed -n "$line p" | cut -c 3- | grep -o '"[^"]\+"'|tr -d '"')
+                echo "$eveline"
+        fi
+done
+
+#3.UNIPROT-B
+#QUESTION13
+
+sed '1,/SQ   SEQUENCE/d' paxillin.txt| head -n -1|tr -d "[:space:]" > paxillin.seq
+
+#3.UNIPROT-B
+#QUESTION14
+
+grep 'RefSeq' paxillin.txt | grep -E -o 'NP_[0-9\.]+;|XP_[0-9\.]+;'| tr -d ";" > refseq_proteins.txt
+
+#4. NCBI
+#QUESTION#15:
+
+sed '1,/ORIGIN/d' sequence.gb | grep -v "//" | grep -E -o '[^0-9]+' | grep '[a-z]' | tr -d [:blank:] > sequencet.gb
+
+#4. NCBI
+#QUESTION#16:
+sed '1,/ORIGIN/d' sequence.gb | grep -v "//" | grep -E -o '[^0-9]+' | grep '[a-z]' | tr -d [:blank:] | tr t u | tr '[:lower:]' '[:upper:]' 

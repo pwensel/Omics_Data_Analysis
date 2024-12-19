@@ -1,0 +1,358 @@
+---
+title: "Assignment 3: Dynamic Reports" 
+author: "Pierre Wensel"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+
+#%B %Y: September 2022
+#%d/%m/%y: 09/09/22
+#%a/%d/%b: Fri 09 Sep
+
+output:
+ html_document:
+    highlight: default
+    number_sections: yes 
+    theme: readable 
+    toc: yes 
+    toc_depth: 2
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(dplyr)
+library(kableExtra)
+
+```
+
+
+# Introduction, Data Importation, Visualization, and Factorization
+
+This is an R Markdown document used to generate a corresponding html file. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. This report was created to summarize work performed to obtain and summarize information in the dataset obtained from a file
+entitled **"SNPdataset.txt"** that includes the following:
+
+_1. The proportion of cases and controls_
+
+_2. The proportion of women and men._
+
+_3. The proportion of women and men within cases and controls, respectively._
+
+_4. The distribution of the genotypes for each specific SNP when stratifying by sex and by case/control._
+
+_5. Displayed basic plots summarizing the aforementioned information._
+
+In general, for categorical variables like GENDER and CASECONTROL or a numerical variable with few different values, numerical summaries and associated barplots for GENDER, CASECONTROL, and SNP[1-5] were generated:
+
+The file dataset SNPdataset.txt was loaded into a dataframe snpdata as follows:
+```{r, echo=TRUE}
+snpdata <- read.table("SNPdataset.txt", header=T, sep="")
+
+```
+
+The dataframe was then visualized as follows:
+```{r, echo=TRUE}
+head(snpdata)
+```
+The dataframe was then visualized alternatively as follows:
+```{r, echo=TRUE}
+summary(snpdata)
+```
+The dataframe was then visualized alternatively as follows using Kable:
+```{r, echo=TRUE}
+kable(snpdata, caption = "Classic Kable Style For SNPData.txt data") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+Evidently, the dataset includes categorical variables (e.g. CASECONTROL, GENDER, SNP1, SNP2, SNP3, SNP4, SNP5) and numerical variables (e.g. GENE_EXPRESSION, AGE). SNPs are variations of a single nucleotide in a specific position of the DNA. They are usually biallelic (e.g. SNP A/G).
+The most frequent allele in the population is called major or wildtype allele and the less frequent is called minor or variant allele. 
+The variable CASECONTROL in dataframe "snpdata" is a categorical variable where 0 means "control" and 1 means "case". However, R only detects 
+numbers and considers this variable as numerical. Specifying CASECONTROL is a categorical variable enables summary to be performed 
+accordingly.The R function factor() is used here to define the categories of a variable.The levels of the variables (the different values of the variable) 
+and labels (names of the categories) are specified. Note: There are N/A missing values for SNP 2,3, and 4 which must later be excluded.
+
+CASECONTROL in dataframe "snpdata" was converted into a categorical variable as follows:
+
+```{r, echo=TRUE}
+snpdata$CASECONTROL <- factor(snpdata$CASECONTROL, levels=c(0,1), labels = c("control", "case"))
+```
+
+The absolute frequencies of case and control were obtained as follows:
+```{r, echo=TRUE}
+summary(snpdata$CASECONTROL)
+```
+
+Variable GENDER in dataframe "snpdata" is character and the order of the categories is (1) "Female" and (2) "Male" (alphabetic order). The first category ("Female") will be the reference for most analysis.For "Male" to be the reference category in a particular analysis a new variable (GENDER2) is defined with the following order of the categories:
+
+```{r, echo=TRUE}
+snpdata$GENDER2 <- factor(snpdata$GENDER, levels=c("Male","Female"))
+```
+
+However, by default, "Female" is used as reference category:
+```{r, echo=TRUE}
+snpdata$GENDER <- factor(snpdata$GENDER, levels=c("Female","Male"))
+```
+The absolute frequencies of male and female were obtained as follows:
+```{r, echo=TRUE}
+summary(snpdata$GENDER)
+```
+
+
+## The proportion of cases and controls
+
+A frequency table and associated barplot depicting "the proportion of cases and controls" is obtained as follows:
+
+Absolute frequency is obtained, and it was assumed that CASECONTROL has no missing data:
+```{r, echo=TRUE}
+freq.cc<-table(snpdata$CASECONTROL)
+
+freq.cc
+```
+
+Relative frequencies were next obtained:
+```{r, echo=TRUE}
+relfreq.cc<-freq.cc/nrow(snpdata)
+
+relfreq.cc
+```
+
+
+Alternatively, relative frequencies were obtained as follows:
+```{r, echo=TRUE}
+relfreq.cc<-prop.table(table(snpdata$CASECONTROL))
+
+relfreq.cc
+```
+
+The relative and absolute frequency vector tables were next combined into a frequency table, and the
+number of table decimal places was set to 4 as follows:
+```{r, echo=TRUE}
+freqtablecc<-cbind(freq.cc, relfreq.cc)
+options(digits=4)
+```
+
+The relative frequency of case and control categorical variables were then graphically depicted via a barplot as follows:
+```{r, echo=TRUE}
+barplot(relfreq.cc, xlab="Status", ylab="Relative Frequency", 
+        names.arg=c("control", "case"), col=c("green", "red"))
+```
+
+Evidently, the proportion of control is relatively higher than that of case.There ratio of cases to control is 2.34 
+
+## The proportion of women and men.
+
+Absolute frequency was obtained, and it was assumed that GENDER had no missing data:
+```{r, echo=TRUE}
+freq.gn<-table(snpdata$GENDER)
+
+freq.gn
+```
+
+Relative frequencies were next obtained:
+```{r, echo=TRUE}
+relfreq.gn<-freq.gn/nrow(snpdata)
+
+relfreq.gn
+```
+
+Relative frequencies were altenernatively obtained as follows:
+```{r, echo=TRUE}
+relfreq.gn<-prop.table(table(snpdata$GENDER))
+
+relfreq.gn
+```
+
+The relative and absolute frequency vector tables were combined into a frequency table and number of table decimal places was set to 4 as follows:
+```{r, echo=TRUE}
+freqtablegn<-cbind(freq.gn, relfreq.gn)
+options(digits=4)
+freqtablegn
+```
+
+The relative frequency of Female and Male categorical variables were graphically depicted via a barplot as follows:
+```{r, echo=TRUE}
+barplot(relfreq.gn, xlab="Status", ylab="Relative Frequency", 
+        names.arg=c("Female", "Male"), col=c("pink", "blue"))
+```
+
+Evidently, the proportion of Female is relatively higher than that of Male.There ratio of females to males is 1.09
+
+## The proportion of women and men within cases and controls, respectively:
+
+For absolute frequencies:
+```{r, echo=TRUE}
+table(snpdata$CASECONTROL, snpdata$GENDER) 
+```
+
+For relative frequencies OR total proportions:
+```{r, echo=TRUE}
+prop.table(table(snpdata$CASECONTROL, snpdata$GENDER)) 
+```
+
+The proportion of women and men within cases and controls, respectively, was next depicted graphically in barplot as follows:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$CASECONTROL, snpdata$GENDER)), xlab="Gender", ylab="Relative Frequency", 
+        names.arg=c("Female", "Male"), col=c("green", "red"))
+```
+
+The proportions of female cases and control were greater than those for male cases and control.
+
+## The distribution of the genotypes for each specific SNP when stratifying by sex and by case/control 
+
+The distribution of the genotypes for each specific SNP when stratifying by sex and by case/control was depicted as follows, with the
+understanding that there are missing SNP data in the original data set that must be excluded:
+
+### Stratification By Case/Control
+
+For SNP1 when stratifying by case/control with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$CASECONTROL, snpdata$SNP1, exclude=NULL))
+```
+
+For SNP1 when stratifying by case/control with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$CASECONTROL, snpdata$SNP1, exclude=NULL),2), col=c(3,4))
+```
+
+The ratio of cases to control for the SNP1 CC genotype was the greatest.
+
+For SNP2 when stratifying by case/control with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$CASECONTROL, snpdata$SNP2, exclude=NULL))
+```
+
+For SNP2 when stratifying by case/control with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$CASECONTROL, snpdata$SNP2,exclude=NULL),2), col=c(3,4))
+```
+
+
+Interestingly, there were no control results for the SNP2 CC genotype.
+
+For SNP3 when stratifying by case/control with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$CASECONTROL, snpdata$SNP3, exclude=NULL))
+```
+
+For SNP3 when stratifying by case/control with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$CASECONTROL, snpdata$SNP3,exclude=NULL),2), col=c(3,4))
+```
+
+
+
+For SNP4 when stratifying by case/control with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$CASECONTROL, snpdata$SNP4, exclude=NULL))
+```
+
+For SNP4 when stratifying by case/control with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$CASECONTROL, snpdata$SNP4,exclude=NULL),2), col=c(3,4))
+```
+
+The ratio of cases to control for SNP4 AC genotype was the highest.
+
+For SNP5 when stratifying by case/control with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$CASECONTROL, snpdata$SNP5, exclude=NULL))
+```
+
+For SNP5 when stratifying by case/control with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$CASECONTROL, snpdata$SNP5,exclude=NULL),2), col=c(3,4))
+```
+
+
+Interestingly, there were no control results for SNP5 AA genotype
+
+### Stratification By Sex
+
+For SNP1 when stratifying by Gender with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$GENDER, snpdata$SNP1, exclude=NULL))
+```
+
+For SNP1 when stratifying by Gender with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$GENDER, snpdata$SNP1, exclude=NULL),2), col=c(3,4))
+```
+
+The female case:control ratio was highest with SNP1 CC genotype declining with CT and TT.
+
+For SNP2 when stratifying by Gender with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$GENDER, snpdata$SNP2, exclude=NULL))
+```
+
+For SNP2 when stratifying by Gender with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$GENDER, snpdata$SNP2,exclude=NULL),2), col=c(3,4))
+```
+
+There was higher ratio of female:male for SNP2 CC genotype than for other genotype
+
+For SNP3 when stratifying by Gender with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$GENDER, snpdata$SNP3, exclude=NULL))
+```
+
+For SNP3 when stratifying by Gender with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$GENDER, snpdata$SNP3,exclude=NULL),2), col=c(3,4))
+```
+
+More females relative to males had SNP3 AA genotype, and more males relative to females had SNP3 GG genotype.
+
+For SNP4 when stratifying by Gender with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$GENDER, snpdata$SNP4, exclude=NULL))
+```
+
+For SNP4 when stratifying by Gender with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$GENDER, snpdata$SNP4,exclude=NULL),2), col=c(3,4))
+```
+
+For SNP5 when stratifying by Gender with total proportions and missing data excluded:
+```{r, echo=TRUE}
+prop.table(table(snpdata$GENDER, snpdata$SNP5, exclude=NULL))
+```
+
+For SNP5 when stratifying by Gender with columnar proportions and missing data excluded:
+```{r, echo=TRUE}
+barplot(prop.table(table(snpdata$GENDER, snpdata$SNP5,exclude=NULL),2), col=c(3,4))
+```
+
+
+More females had SNP5 AA genotype compared to male, and more males had SNP5 CC genotype compared to females.
+
+##_Additional Continuous Variable Data Analysis_
+
+**Boxplot**
+
+A boxplot was used to graphically depict the continuous numerical variable with many values (GENE_EXPRESSON) as follows:
+
+```{r, echo=TRUE}
+boxplot(snpdata$GENE_EXPRESSION, ylab="Gene Expression", col="green")
+```
+
+Mean gene expression was approximately at ~4000
+
+**Histogram**
+
+A histogram is used to furthermore graphically depict the continuous numerical variable with many values (GENE_EXPRESSON):
+
+```{r, echo=TRUE}
+hist(snpdata$GENE_EXPRESSION)
+```
+
+**Empirical cumulative distribution**
+
+The empirical cumulative distribution provides the proportion of GENE_EXPRESSION values below a given value:
+```{r, echo=TRUE}
+f<-ecdf(snpdata$GENE_EXPRESSION)
+
+plot(f)
+
+```
+
