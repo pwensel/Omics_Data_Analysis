@@ -1,0 +1,1100 @@
+#PIERRE WENSEL
+#UVIC OMICS DATA ANALYSIS
+#EPIGENOMICS PRACTICAL TASKS #4 and TASK #5 
+
+#TRACKING LINUX UBUNTU 22.04 BASH TERMINAL COMMAND:
+
+#PREPARATION FOR PARENT DIRECTORY:
+
+pwensel@DELL-OPTIPLEX:/$ sudo su
+[sudo] password for pwensel:
+root@DELL-OPTIPLEX:/#
+root@DELL-OPTIPLEX:/# ls
+Docker  boot  etc   init  lib32  libx32      media  opt   root  sbin  srv  tmp  var
+bin     dev   home  lib   lib64  lost+found  mnt    proc  run   snap  sys  usr
+root@DELL-OPTIPLEX:/# cd home
+root@DELL-OPTIPLEX:/home# ls
+pwensel  transcriptomics
+root@DELL-OPTIPLEX:/home#ls
+pwensel  transcriptomics
+root@DELL-OPTIPLEX:/home#cd pwensel
+root@DELL-OPTIPLEX:/home/pwensel# ls
+docker_exercise  nextflow  work
+root@DELL-OPTIPLEX:/home/pwensel#
+root@DELL-OPTIPLEX:/home/pwensel# mkdir -p epigenomics
+root@DELL-OPTIPLEX:/home/pwensel# cd epigenomics
+#TURN ON DOCKER DESKTOP BY CLICKING DESKTOP HAPPY WHALE ICON
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics# git init
+Initialized empty Git repository in /home/pwensel/epigenomics/.git/
+
+# Prepare directories to store the results of your analyses
+#git clone the current repository
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics# git clone https://github.com/bborsari/epigenomics_uvic
+Cloning into 'epigenomics_uvic'...
+remote: Enumerating objects: 243, done.
+remote: Counting objects: 100% (95/95), done.
+remote: Compressing objects: 100% (83/83), done.
+remote: Total 243 (delta 40), reused 59 (delta 7), pack-reused 148
+Receiving objects: 100% (243/243), 101.50 MiB | 5.07 MiB/s, done.
+Resolving deltas: 100% (77/77), done.
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics# docker images
+REPOSITORY                 TAG              IMAGE ID       CREATED         SIZE
+redo_seqclass              latest           9c3b45585589   14 hours ago    447MB
+seqclass                   latest           bc685a017666   21 hours ago    446MB
+seqclass_redo              latest           bc685a017666   21 hours ago    446MB
+pwensel/seqclass_redo      latest           bc685a017666   21 hours ago    446MB
+seqclass3                  latest           1cc007582971   21 hours ago    447MB
+uvic_epigenomics           firstimagepush   dfac1a134116   24 hours ago    447MB
+pwensel/uvic_epigenomics   latest           dfac1a134116   24 hours ago    447MB
+seqclass1                  latest           dfac1a134116   24 hours ago    447MB
+pwensel/seqclass           latest           f2928bae5d48   27 hours ago    446MB
+hello-world                latest           d2c94e258dcb   13 months ago   13.3kB
+ceciliaklein/teaching      uvic             6e32aa5eb819   5 years ago     6.7GB
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics# docker rmi hello-world
+Untagged: hello-world:latest
+Untagged: hello-world@sha256:266b191e926f65542fa8daaec01a192c4d292bff79426f47300a046e1bc576fd
+Deleted: sha256:d2c94e258dcb3c5ac2798d32e1249e42ef01cba4841c2234249495f87264ac5a
+Deleted: sha256:ac28800ec8bb38d5c35b49d45a6ac4777544941199075dff8c4eb63e093aa81e
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics# ls
+epigenomics_uvic
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics#cd epigenomics_uvic
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics# ls
+epigenomics_uvic
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics# cd epigenomics_uvic
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  test
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic# cd ATAC-seq
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ls
+cmnd.txt
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd ..
+
+#Running container-Repeat after every re-start
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic#sudo docker run -v $PWD:$PWD -w $PWD --rm -it dgarrimar/epigenomics_course 
+
+
+Unable to find image 'dgarrimar/epigenomics_course:latest' locally
+latest: Pulling from dgarrimar/epigenomics_course
+36313638a2b5: Pull complete
+02a19da13de2: Pull complete
+b714fc0e815c: Pull complete
+146d2b2e62eb: Pull complete
+8caa494040b6: Pull complete
+528b63e71f2a: Pull complete
+f90542ed4a17: Pull complete
+Digest: sha256:49a020e65def02c047776abae605de64c92cfe8785346f13b6eb227fb16cd203
+Status: Downloaded newer image for dgarrimar/epigenomics_course:latest 
+
+###############################################################################################################################################################
+
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  test
+
+
+#PART 4.1
+#Move to folder ATAC-seq, and create folders to store bigBed data files and peaks analyses files. Make sure the files are organized in a #consistent way as done for ChIP-seq.
+
+##Create directories with permissions set
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic# cd ATAC-seq
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ls
+cmnd.txt
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mkdir data
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mkdir analyses
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mkdir annotation
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mkdir data/bed.files
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mkdir data/bigWig.files
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mkdir data/bigBed.files
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mkdir analyses/peaks.analysis
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ls
+analyses  annotation  cmnd.txt  data
+
+#PART 4.2
+#Retrieve from a newly generated metadata file ATAC-seq peaks (bigBed narrow, pseudoreplicated peaks, assembly GRCh38) for stomach and #sigmoid_colon for the same donor used in the previous sections. Hint: have a look at what we did here. Make sure your md5sum values coincide #with the ones provided by ENCODE.The Encyclopedia of DNA Elements is a public research project which aims "to build a comprehensive parts #list of functional elements in the human genome.
+
+#Downloading specific files from the ENCODE portal at https://www.encodeproject.org/
+#EN-TEx experiments form a specific collection to analyze ATAC-seq data from stomach and sigmoid colon of one selected EN-TEx donor (identifier: ENCDO451RUA):
+
+#At ENCODE portal, navigating as follows:
+
+#data->Epigenomics from four individuals (ENTEx)->ENCDO451RUA
+
+#Select all Functional genomics experiments derived from the donor (344) by clicking lower right "View All". 
+Narrow down search to the desired experiments (ATAC-seq on stomach and sigmoid colon) 
+by using the Experiment Search toolbar on the left:
+
+Assay type: DNA binding
+Biosample term name: stomach AND sigmoid colon
+
+#These are the options
+
+Assay:
+-Assay type (DNA accessibility 12)
+-Assay title (ATAC-seq)
+-Hide Control Samples (No)
+Biosample
+-Organism(Homo sapiens)
+-Biosample classification (tissue)
+-Biosample (sigmoid colon 1, stomach 1)
+
+Showing 5 of 5 results
+
+ATAC-seq in sigmoid colon
+Homo sapiens sigmoid colon tissue male adult (54 years)
+Lab: Michael Snyder, Stanford
+Project: ENCODE
+Reference Epigenome: ENCSR517BJQ
+
+DNase-seq in sigmoid colon
+Homo sapiens sigmoid colon tissue male adult (54 years)
+Lab: John Stamatoyannopoulos, UW
+Project: ENCODE
+Reference Epigenome: ENCSR517BJQ
+
+ATAC-seq in stomach
+Homo sapiens stomach tissue male adult (54 years)
+Lab: Michael Snyder, Stanford
+Project: ENCODE
+Reference Epigenome: ENCSR135MTK
+
+DNase-seq in stomach
+Homo sapiens stomach tissue male adult (54 years)
+Lab: John Stamatoyannopoulos, UW
+Project: ENCODE
+Reference Epigenome: ENCSR135MTK
+
+snATAC-seq in stomach
+Homo sapiens stomach tissue male adult (54 years)
+Lab: Bing Ren, UCSD
+Project: ENCODE
+
+These are DNA accessibility experiments that comprise 5 ATAQ-seq experiments with ATAQ-seq and control samples.Click the “Download” button below to download a “files.txt” file that contains a list of URLs to a file containing all the experimental metadata and links to download the file. The first line of the file has the URL or command line to download the metadata file. Navigate to the Download toggle button at the top. 
+Instead of Download default files, choose the option Selected files. The following command using cURL can be used to download all the files in the list: xargs -L 1 curl -O -J -L < files.txt
+
+#Downloaded files.txt
+
+There is a considerable number of files associated with a given experiment (fastq, bam, bigBed, bigWig). For a matter of space limit, 
+it's always convenient to download only the files that we need, and avoid storing for a long time material that we could easily re-download. To do so, we can rely on the metadata file provided by ENCODE. The metadata file contains information about all the files related to the selected experiment. The URL of the metadata file is provided on the first line of the files.txt:
+
+#Download the metadata file:
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ../bin/download.metadata.sh "https://www.encodeproject.org/metadata/?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=sigmoid+colon&biosample_ontology.term_name=stomach&assay_slims=DNA+accessibility&type=Experiment"
+The name is too long, 265 chars total.
+Trying to shorten...
+New name is index.html?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=sigmoid+colon&biosample_ontology.term_name=stomach&assay_slims=DNA+.
+--2024-06-06 23:24:25--  https://www.encodeproject.org/metadata/?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=sigmoid+colon&biosample_ontology.term_name=stomach&assay_slims=DNA+accessibility&type=Experiment
+Resolving www.encodeproject.org (www.encodeproject.org)... 34.211.244.144
+Connecting to www.encodeproject.org (www.encodeproject.org)|34.211.244.144|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/tsv]
+Saving to: 'index.html?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=sigmoid+colon&biosample_ontology.term_name=stomach&assay_slims=DNA+'
+
+index.html?replicates.library.biosample.donor.uuid=d     [ <=>                                                                                                                ]  89.71K  --.-KB/s    in 0.09s
+
+2024-06-06 23:24:26 (950 KB/s) - 'index.html?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=sigmoid+colon&biosample_ontology.term_name=stomach&assay_slims=DNA+' saved [91866]
+
+#SUCCESS!!!!!!!!!!
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq#
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ls
+analyses  annotation  cmnd.txt  data  metadata.tsv
+
+#Explore the structure of the metadata file by having a look at the header (i.e. the first line):
+
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq#head -1 metadata.tsv
+
+File_accession  File_format     File_type       File_format_type        Output_type     File_assembly   Experiment_accession    Assay   Donor(s)        Biosample_term_id       Biosample_term_name     Biosample_type   Biosample_organism      Biosample_treatments    Biosample_treatments_amount     Biosample_treatments_duration   Biosample_genetic_modifications_methods Biosample_genetic_modifications_categories      Biosample_genetic_modifications_targets  Biosample_genetic_modifications_gene_targets    Biosample_genetic_modifications_site_coordinates        Biosample_genetic_modifications_zygosity        Experiment_targetLibrary_made_from       Library_depleted_in     Library_extraction_method       Library_lysis_method    Library_crosslinking_method     Library_strand_specific Experiment_date_released        Project RBNS_protein_concentration       Library_fragmentation_method    Library_size_range      Biological_replicate(s) Technical_replicate(s)  Read_length     Mapped_read_length      Run_type        Paired_end      Paired_with      Index_of        Derived_from    Size    Lab     md5sum  dbxrefs File_download_URL       Genome_annotation       Platform        Controlled_by   File_Status     s3_uri  Azure_URL       File_analysis_title      File_analysis_status    Audit_WARNING   Audit_NOT_COMPLIANT     Audit_ERROR
+
+To retrieve the FASTQ IDs of the required experiment we need to know which columns can provide us with the right information. 
+
+root@dded48db6447:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq#head -1 metadata.tsv | awk 'BEGIN{FS=OFS="\t"}{for (i=1;i<=NF;i++){print $i, i}}'
+
+File_accession  1
+File_format     2
+File_type       3
+File_format_type        4
+Output_type     5
+File_assembly   6
+Experiment_accession    7
+Assay   8
+Donor(s)        9
+Biosample_term_id       10
+Biosample_term_name     11
+Biosample_type  12
+Biosample_organism      13
+Biosample_treatments    14
+Biosample_treatments_amount     15
+Biosample_treatments_duration   16
+Biosample_genetic_modifications_methods 17
+Biosample_genetic_modifications_categories      18
+Biosample_genetic_modifications_targets 19
+Biosample_genetic_modifications_gene_targets    20
+Biosample_genetic_modifications_site_coordinates        21
+Biosample_genetic_modifications_zygosity        22
+Experiment_target       23
+Library_made_from       24
+Library_depleted_in     25
+Library_extraction_method       26
+Library_lysis_method    27
+Library_crosslinking_method     28
+Library_strand_specific 29
+Experiment_date_released        30
+Project 31
+RBNS_protein_concentration      32
+Library_fragmentation_method    33
+Library_size_range      34
+Biological_replicate(s) 35
+Technical_replicate(s)  36
+Read_length     37
+Mapped_read_length      38
+Run_type        39
+Paired_end      40
+Paired_with     41
+Index_of        42
+Derived_from    43
+Size    44
+Lab     45
+md5sum  46
+dbxrefs 47
+File_download_URL       48
+Genome_annotation       49
+Platform        50
+Controlled_by   51
+File_Status     52
+s3_uri  53
+Azure_URL       54
+File_analysis_title     55
+File_analysis_status    56
+Audit_WARNING   57
+Audit_NOT_COMPLIANT     58
+Audit_ERROR     59
+
+#We are interested in the following field
+
+md5sum = field/column 46
+
+#See how many FASTQ files are available for the experiment of interest:
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# grep -F ATAC-seq metadata.tsv | grep -F sigmoid_colon | awk 'BEGIN{FS="\t"}$2=="fastq"{n++}END{print n}'
+2 
+
+#Navigate to the page of the experiment on the ENCODE portal and double-check that this number coincides with the number you have retrieved.
+
+#At the top find the audit terms related to this experiment. In this case we are warned that the control samples are not reported in the metadata file.
+Remember that, in order to correctly process ATAC-seq data, we do not need the control samples? We will not be processing and mapping FASTq and instead now moving on to downloading bed, bigBed files
+
+#There is a considerable number of files associated with a given experiment (fastq, bam, bigBed, bigWig). For a matter of space limit, it's #always convenient to download only the files that we need, and avoid storing for a long time material that we could easily re-download. To do #so, we can rely on the metadata file provided by ENCODE. The metadata file contains information about all the files related to the selected #experiment. The URL of the metadata file is provided on the first line of the files.txt:
+#The metadata file can now be parsed to retrieve the identifiers of the files we want to download.  
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# grep -F ATAC-seq metadata.tsv |\
+> grep -F "bigBed_narrowPeak" |\
+> grep -F "pseudoreplicated_peaks" |\
+> grep -F "GRCh38" |\
+> awk 'BEGIN{FS=OFS="\t"}{print $1, $11}' |\
+> sort -k2,2 -k1,1r |\
+> sort -k2,2 -u > analyses/bigBed.peaks.ids.txt
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd analyses
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# ls
+bigBed.peaks.ids.txt  peaks.analysis
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# head bigBed.peaks.ids.txt
+ENCFF287UHP     sigmoid_colon
+ENCFF762IFP     stomach
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# cd ..
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd data
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# ls
+bed.files  bigBed.files  bigWig.files
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# cd ..
+
+## Now downloading the bigBed peak calling files.
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cut -f1 analyses/bigBed.peaks.ids.txt |\
+> while read filename; do
+>   wget -P data/bigBed.files "https://www.encodeproject.org/files/$filename/@@download/$filename.bigBed"
+> done
+
+--2024-06-06 08:35:42--  (try:20)  https://www.encodeproject.org/files/ENCFF762IFP/@@download/ENCFF762IFP.bigBed
+Reusing existing connection to www.encodeproject.org:443.
+HTTP request sent, awaiting response... 504 Gateway Time-out
+Giving up.
+
+#TROUBLESHOOT
+#Exited and Checked status
+pwensel@DELL-OPTIPLEX:~$ sudo ufw status
+[sudo] password for pwensel:
+Status: inactive
+pwensel@DELL-OPTIPLEX:~$
+#Turned off and disabled firewall
+
+#Fixed client-side DNS issues by flushing DNS cache in Windows operating system:
+C:\Windows\System32>ipconfig /flushdns
+Windows IP Configuration
+Successfully flushed the DNS Resolver Cache.
+C:\Windows\System32>
+# In the Clear browsing data pop-up, specified the time range and what browsing data you want to clear. Options include Browsing data, Download history, 
+#Cookies and other site data, and Cached images and files. Ensure the checkbox next to Cached images and files is selected.
+
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  test
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic# cd bin
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic/bin# ls
+VennDiagram.4groups.R  aggregation.plot.R  boxplot.expression.R  discardRows.sh  download.metadata.sh  get.matrix.chipseq.sh  non.redundant.TSS.sh  scatterplot.correlation.R  selectColumns.sh  selectRows.sh
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic/bin# cd ..
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  test
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ls
+analyses  annotation  cmnd.txt  data  metadata.tsv
+#Volume folders persisted. Re-running container:
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd ..
+root@DELL-OPTIPLEX:/home/pwensel/epigenomics/epigenomics_uvic#sudo docker run -v $PWD:$PWD -w $PWD --rm -it dgarrimar/epigenomics_course
+
+#TRY AGAIN
+#Downloading bigBed peak calling  files
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cut -f1 analyses/bigBed.peaks.ids.txt |\
+> while read filename; do
+>   wget -P data/bigBed.files "https://www.encodeproject.org/files/$filename/@@download/$filename.bigBed"
+> done
+--2024-06-06 23:43:49--  https://www.encodeproject.org/files/ENCFF287UHP/@@download/ENCFF287UHP.bigBed
+Resolving www.encodeproject.org (www.encodeproject.org)... 34.211.244.144
+Connecting to www.encodeproject.org (www.encodeproject.org)|34.211.244.144|:443... connected.
+HTTP request sent, awaiting response... 307 Temporary Redirect
+Saving to: 'data/bigBed.files/ENCFF287UHP.bigBed'
+
+ENCFF287UHP.bigBed                                   100%[===================================================================================================================>]   6.27M  4.98MB/s    in 1.3s
+
+2024-06-06 23:43:51 (4.98 MB/s) - 'data/bigBed.files/ENCFF287UHP.bigBed' saved [6569988/6569988]
+
+--2024-06-06 23:43:51--  https://www.encodeproject.org/files/ENCFF762IFP/@@download/ENCFF762IFP.bigBed
+Resolving www.encodeproject.org (www.encodeproject.org)... 34.211.244.144
+Connecting to www.encodeproject.org (www.encodeproject.org)|34.211.244.144|:443... connected.
+HTTP request sent, awaiting response... 307 Temporary Redirect
+Saving to: 'data/bigBed.files/ENCFF762IFP.bigBed'
+
+ENCFF762IFP.bigBed                                   100%[===================================================================================================================>]   6.09M  5.58MB/s    in 1.1s
+
+2024-06-06 23:43:53 (5.58 MB/s) - 'data/bigBed.files/ENCFF762IFP.bigBed' saved [6390157/6390157]
+
+#SUCCESS!!!!!!!!!!!!
+
+#DID NOT EXECUTE THESE COMMANDS FOR downloading bigWig files for fold-change over control
+#grep -F "ATAC-seq" metadata.tsv |\
+#grep -F "bigWig" |\
+#grep -F "fold_change_over_control" |\
+#grep -F "GRCh38" |\
+#awk 'BEGIN{FS=OFS="\t"}{print $1, $11, $23}' |\
+#sort -k2,2 -k1,1r |\
+#sort -k2,2 -u > analyses/bigWig.FC.ids.txt
+
+#cut -f1 analyses/bigWig.FC.ids.txt |\
+#while read filename; do
+  #wget -P data/bigWig.files "https://www.encodeproject.org/files/$filename/@@download/$filename.bigWig"
+#done
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ls
+analyses  annotation  cmnd.txt  data  metadata.tsv
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd analyses
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# ls
+bigBed.peaks.ids.txt  peaks.analysis
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# cd ..
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd data
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# ls
+bed.files  bigBed.files  bigWig.files
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# cd bed.files
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bed.files# ls
+#Empty
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bed.files# cd ..
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# cd bigBed.files
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bigBed.files# ls
+ENCFF287UHP.bigBed  ENCFF762IFP.bigBed
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bigBed.files# cd ..
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# cd bigWig.files
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bigWig.files# ls
+#Empty
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bigWig.files# cd ..
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# cd ..
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq#
+
+
+#When downloading files, it's always advisable to check their integrity by verifying their MD5 hash, a sort of digital fingerprint of the #file. MD5 hashes can be computed with the command md5sum. The filed #46 of the metadata table contains the MD5 hash of a given file to confirm downloaded files:
+
+##Checking md5sum
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# ../bin/selectRows.sh <(cut -f1 analyses/bigBed.*.ids.txt) metadata.tsv | cut -f1,46 > data/bigBed.files/md5sum.txt
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cat data/bigBed.files/md5sum.txt |\
+> while read filename original_md5sum; do
+>   md5sum data/bigBed.files/"$filename".bigBed |\
+>   awk -v filename="$filename" -v original_md5sum="$original_md5sum" 'BEGIN{FS=" "; OFS="\t"}{print filename, original_md5sum, $1}'
+> done > tmp
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# mv tmp data/bigBed.files/md5sum.txt
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq#  cd data/bigBed.files/
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bigBed.files# ls
+ENCFF287UHP.bigBed  ENCFF762IFP.bigBed  md5sum.txt
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bigBed.files# cat md5sum.txt
+ENCFF287UHP     46f2ae76779da5be7de09b63d5c2ceb9        46f2ae76779da5be7de09b63d5c2ceb9
+ENCFF762IFP     f6a97407b6ba4697108e74451fb3eaf4        f6a97407b6ba4697108e74451fb3eaf4
+
+#Ensure original and computed MD5 encryption identical 
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# awk '$2!=$3' data/bigBed.files/md5sum.txt  
+
+#No output indicates that MD5 are identical for downloaded file integrity
+
+#PART 4.3:
+#For each tissue, run an intersection analysis using BEDTools: 
+#Report 1) the number of peaks that intersect promoter regions( 47871 peaks.analysis/peaks.intersect.promoters.sigmoid_colon.bed, 44749 peaks.analysis/peaks.intersect.promoters.stomach.bed, 92620 total)
+
+#Report 2) the number of peaks that fall outside gene #coordinates (whole gene body, not just the promoter regions)(37035 peaks.analysis/peaks.outside.gene.body.sigmoid_colon.bed, 34537 peaks.analysis/peaks.outside.gene.body.stomach.bed, 71572 total
+)
+
+PART 4.3.1:
+#bigBed to BED files conversion:
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cut -f1 analyses/bigBed.peaks.ids.txt |\
+> while read filename; do
+>   bigBedToBed data/bigBed.files/"$filename".bigBed data/bed.files/"$filename".bed
+> done
+
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd data
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# ls
+bed.files  bigBed.files  bigWig.files
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# cd bed.files
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bed.files# ls
+ENCFF287UHP.bed  ENCFF762IFP.bed
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data/bed.files# cd ..
+root@be797df284ec:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/data# cd ..
+
+#Using the following BED files: "gencode.v24.protein.coding.non.redundant.TSS.bed," 
+#containing non-redundant transcription start site (TSS) coordinates of protein-coding genes, and "gencode.v24.protein.coding.gene.body.bed," 
+#to get  genes with peaks at the promoter region in each tissue:
+
+#Download annotation file
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# wget -P annotation/ https://public-docs.crg.es/rguigo/Data/bborsari/UVIC/epigenomics_course/gencode.v24.protein.coding.non.redundant.TSS.bed
+--2024-06-07 02:49:58--  https://public-docs.crg.es/rguigo/Data/bborsari/UVIC/epigenomics_course/gencode.v24.protein.coding.non.redundant.TSS.bed
+Resolving public-docs.crg.es (public-docs.crg.es)... 84.88.66.216
+Connecting to public-docs.crg.es (public-docs.crg.es)|84.88.66.216|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 8389150 (8.0M) [application/vnd.realvnc.bed]
+Saving to: 'annotation/gencode.v24.protein.coding.non.redundant.TSS.bed'
+
+gencode.v24.protein.coding.no 100%[=================================================>]   8.00M  2.82MB/s    in 2.8s
+
+2024-06-07 02:50:01 (2.82 MB/s) - 'annotation/gencode.v24.protein.coding.non.redundant.TSS.bed' saved [8389150/8389150]
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd annotation
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/annotation# ls
+gencode.v24.protein.coding.non.redundant.TSS.bed
+
+#Hands-On Tutorial Code
+#!/usr/bin/env sh
+#cut -f-2 analyses/bigBed.peaks.ids.txt |\
+#while read filename tissue; do 
+  #bedtools intersect -a annotation/gencode.v24.protein.coding.non.redundant.TSS.bed -b data/bed.files/"$filename".bed -u |\
+  #cut -f7 |\
+  #sort -u > analyses/peaks.analysis/genes.with.peaks."$tissue".H3K4me3.txt
+#done
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis#cut -f-2 analyses/bigBed.peaks.ids.txt |\
+while read filename tissue; do
+    bedtools intersect -a annotation/gencode.v24.protein.coding.non.redundant.TSS.bed -b data/bed.files/"$filename".bed -u 
+> analyses/peaks.analysis/peaks.intersect.promoters."$tissue".bed 
+done
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd analyses/peaks.analysis
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# ls
+peaks.intersect.promoters.sigmoid_colon.bed  peaks.intersect.promoters.stomach.bed
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# wc -l peaks.intersect.promoters.stomach.bed
+0 peaks.intersect.promoters.stomach.bed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# wc -l peaks.intersect.promoters.sigmoid_colon.bed
+0 peaks.intersect.promoters.sigmoid_colon.bed
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# wc -l peaks.analysis/*
+0 peaks.analysis/peaks.intersect.promoters.sigmoid_colon.bed
+0 peaks.analysis/peaks.intersect.promoters.stomach.bed
+0 total
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# cd peaks.analysis
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# ls
+peaks.intersect.promoters.sigmoid_colon.bed  peaks.intersect.promoters.stomach.bed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# rm peaks.intersect.promoters.stomach.bed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# rm peaks.intersect.promoters.sigmoid_colon.bed
+
+#REDO 
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cut -f-2 analyses/bigBed.peaks.ids.txt |\
+> while read filename tissue; do
+> bedtools intersect -a data/bed.files/"$filename".bed -b annotation/gencode.v24.protein.coding.non.redundant.TSS.bed -u> analyses/peaks.analysis/peaks.intersect.promoters."$tissue".bed
+> done
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd analyses/peaks.analysis
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# ls
+peaks.intersect.promoters.sigmoid_colon.bed  peaks.intersect.promoters.stomach.bed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# wc -l peaks.intersect.promoters.stomach.bed
+44749 peaks.intersect.promoters.stomach.bed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# wc -l peaks.intersect.promoters.sigmoid_colon.bed
+47871 peaks.intersect.promoters.sigmoid_colon.bed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# wc -l peaks.analysis/*
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# wc -l peaks.analysis/*
+  47871 peaks.analysis/peaks.intersect.promoters.sigmoid_colon.bed
+  44749 peaks.analysis/peaks.intersect.promoters.stomach.bed
+  92620 total
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# cd ..
+
+PART 4.3.2: 
+
+#Download annotation file:
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# wget -P annotation "https://www.encodeproject.org/files/gencode.v24.primary_assembly.annotation/@@download/gencode.v24.primary_assembly.annotation.gtf.gz"
+--2024-06-07 06:05:58--  https://www.encodeproject.org/files/gencode.v24.primary_assembly.annotation/@@download/gencode.v24.primary_assembly.annotation.gtf.gz
+Resolving www.encodeproject.org (www.encodeproject.org)... 34.211.244.144
+Connecting to www.encodeproject.org (www.encodeproject.org)|34.211.244.144|:443... connected.
+HTTP request sent, awaiting response... 307 Temporary Redirect
+Saving to: 'annotation/gencode.v24.primary_assembly.annotation.gtf.gz'
+
+gencode.v24.primary_assembly.annotation.gtf.gz       100%[===================================================================================================================>]  36.93M  5.92MB/s    in 7.2s
+
+2024-06-07 06:06:06 (5.14 MB/s) - 'annotation/gencode.v24.primary_assembly.annotation.gtf.gz' saved [38723767/38723767]
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# gunzip annotation/gencode.v24.primary_assembly.annotation.gtf.gz
+ 
+less annotation/gencode.v24.primary_assembly.annotation.gtf
+
+##description: evidence-based annotation of the human genome (GRCh38), version 24 (Ensembl 83)
+##provider: GENCODE
+##contact: gencode-help@sanger.ac.uk
+##format: gtf
+##date: 2015-12-03
+chr1    HAVANA  gene    11869   14409   .       +       .       gene_id "ENSG00000223972.5"; gene_type "transcribed_unprocessed_pseudogene"; gene_status "KNOWN"; gene_name "DDX11L1"; level 2; havana_gene "OTTHUMG00000000961.2";
+
+#To quit less, type q
+
+#Create gene body coordinates bed file:
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# awk '$3=="gene"' annotation/gencode.v24.primary_assembly.annotation.gtf | grep -F "protein_coding" | cut -d ";" -f1 | awk 'BEGIN{OFS="\t"}{print $1, $4, $5, $10, 0, $7, $10}' | sed 's/\"//g' | awk 'BEGIN{FS=OFS="\t"}$1!="chrM"{$2=($2-1); print $0}' >annotation/gencode.v24.protein.coding.gene.body.bed
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd annotation
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/annotation# ls
+gencode.v24.primary_assembly.annotation.gtf  gencode.v24.protein.coding.gene.body.bed  gencode.v24.protein.coding.non.redundant.TSS.bed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/annotation# cd ..
+
+cut -f-2 analyses/bigBed.peaks.ids.txt |
+while read filename tissue; do
+bedtools intersect -a data/bed.files/"$filename".bed -b annotation/gencode.v24.protein.coding.gene.body.bed  -v > analyses/peaks.analysis/peaks.outside.gene.body."$tissue".bed
+done
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd analyses
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# ls
+bigBed.peaks.ids.txt  peaks.analysis
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# cd peaks.analysis
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses/peaks.analysis# ls
+peaks.intersect.promoters.sigmoid_colon.bed  peaks.intersect.promoters.stomach.bed  peaks.outside.gene.body.sigmoid_colon.bed  peaks.outside.gene.body.stomach.bed
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# wc peaks.analysis/peaks.outside.gene.body*.bed -l
+  37035 peaks.analysis/peaks.outside.gene.body.sigmoid_colon.bed
+  34537 peaks.analysis/peaks.outside.gene.body.stomach.bed
+  71572 total
+
+
+PART 5. Distal regulatory activity
+
+#Study distal regulatory activity
+#From section 4., you should have obtained a set of ATAC-seq peaks in stomach and sigmoid_colon that lie outside gene coordinates.
+#We will use these peaks as a starting point to build a catalogue of distal regulatory regions.
+
+#PART 5.1: Create a folder regulatory_elements inside epigenomics_uvic. This will be the folder where you store all your subsequent results.
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq/analyses# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ATAC-seq# cd ..
+ 
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# mkdir regulatory_elements
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  regulatory_elements  test
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# mkdir regulatory_elements/analyses
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# cd regulatory_elements
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements#
+
+#PART 5.2: Distal regulatory regions are usually found to be flanked by both H3K27ac and H3K4me1. From your starting catalogue of open regions in each tissue, 
+#select those that overlap peaks of H3K27ac AND H3K4me1 in the corresponding tissue. You will get a list of candidate distal regulatory elements for each tissue. How many are they?  
+(14215 overlap.peaks.H3K27ac.H3K4me1.sigmoid_colon.bed, 8022 overlap.peaks.H3K27ac.H3K4me1.stomach.bed, 22237 total)
+
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  regulatory_elements  test
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# cd ChIP-seq
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq# ls
+chip-nf  cmnd.txt  data
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq# cd data
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq/data# ls
+fastq.files
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq/data# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic#
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq# ../bin/download.metadata.sh "https://www.encodeproject.org/metadata/?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=stomach&biosample_ontology.term_name=sigmoid+colon&assay_slims=DNA+binding&target.label=H3K4me1&target.label=H3K27ac&type=Experiment"
+The name is too long, 301 chars total.
+Trying to shorten...
+New name is index.html?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=stomach&biosample_ontology.term_name=sigmoid+colon&assay_slims=DNA+.
+--2024-06-07 07:35:01--  https://www.encodeproject.org/metadata/?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=stomach&biosample_ontology.term_name=sigmoid+colon&assay_slims=DNA+binding&target.label=H3K4me1&target.label=H3K27ac&type=Experiment
+Resolving www.encodeproject.org (www.encodeproject.org)... 34.211.244.144
+Connecting to www.encodeproject.org (www.encodeproject.org)|34.211.244.144|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/tsv]
+Saving to: 'index.html?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=stomach&biosample_ontology.term_name=sigmoid+colon&assay_slims=DNA+'
+
+index.html?replicates.library.biosample.donor.uuid=d     [ <=>                                                                                                                ]  83.44K  --.-KB/s    in 0.1s
+
+2024-06-07 07:35:02 (804 KB/s) - 'index.html?replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&status=submitted&status=in+progress&biosample_ontology.term_name=stomach&biosample_ontology.term_name=sigmoid+colon&assay_slims=DNA+' saved [85443]
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq# ls
+chip-nf  cmnd.txt  data  metadata.tsv
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/ChIP-seq# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  regulatory_elements  test
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# cd regulatory_elements
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# ls
+analyses
+
+##Download files
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# for modification in H3K27ac H3K4me1
+> do
+>     echo $modification
+>     grep -F $modification ../ChIP-seq/metadata.tsv | \
+>     grep -F "bigBed_narrowPeak" | \
+>     grep -F "pseudoreplicated_peaks" | \
+>     grep -F "GRCh38" | \
+>     awk 'BEGIN{FS=OFS="\t"}{print $1, $11, $23}' | \
+>     sort -k2,2 -k1,1r | \
+>     sort -k2,2 -u > analyses/bigBed.$modification.peaks.ids.txt
+> done
+H3K27ac
+H3K4me1
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cd analyses
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses# ls
+bigBed.H3K27ac.peaks.ids.txt  bigBed.H3K4me1.peaks.ids.txt
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# mkdir analyses/peaks.analysis
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# mkdir data
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# mkdir data/H3K27ac
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# mkdir data/H3K4me1
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# for modification in H3K27ac H3K4me1
+> do
+>     cut -f1 analyses/bigBed.$modification.peaks.ids.txt | \
+>     while read filename; do
+>         echo $filename
+>         wget -P data/$modification "https://www.encodeproject.org/files/$filename/@@download/$filename.bigBed"
+>     done
+> done
+
+ENCFF872UHN
+--2024-06-07 07:59:05--  https://www.encodeproject.org/files/ENCFF872UHN/@@download/ENCFF872UHN.bigBed
+Resolving www.encodeproject.org (www.encodeproject.org)... 34.211.244.144, 34.211.244.144
+Connecting to www.encodeproject.org (www.encodeproject.org)|34.211.244.144|:443... connected.
+HTTP request sent, awaiting response... 307 Temporary Redirect
+ENCFF872UHN.bigBed                                   100%[===================================================================================================================>]   2.84M  3.50MB/s    in 0.8s
+
+2024-06-07 07:59:07 (3.50 MB/s) - 'data/H3K27ac/ENCFF872UHN.bigBed' saved [2980089/2980089]
+ENCFF977LBD.bigBed                                   100%[===================================================================================================================>]   2.84M  3.45MB/s    in 0.8s
+
+2024-06-07 07:59:09 (3.45 MB/s) - 'data/H3K27ac/ENCFF977LBD.bigBed' saved [2978365/2978365]
+ENCFF724ZOF.bigBed                                   100%[===================================================================================================================>]   4.54M  4.11MB/s    in 1.1s
+
+2024-06-07 07:59:11 (4.11 MB/s) - 'data/H3K4me1/ENCFF724ZOF.bigBed' saved [4755854/4755854]
+ENCFF844XRN.bigBed                                   100%[===================================================================================================================>]   3.22M  3.46MB/s    in 0.9s
+
+2024-06-07 07:59:14 (3.46 MB/s) - 'data/H3K4me1/ENCFF844XRN.bigBed' saved [3381950/3381950]
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# ls
+H3K27ac  H3K4me1
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd H3K27ac
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K27ac# ls
+ENCFF872UHN.bigBed  ENCFF977LBD.bigBed
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K27ac# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd H3K4me1
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K4me1# ls
+ENCFF724ZOF.bigBed  ENCFF844XRN.bigBed
+
+##Checking md5sum integrity
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# for modification in H3K27ac H3K4me1
+> do
+>     echo $modification
+>     ../bin/selectRows.sh <(cut -f1 analyses/bigBed.$modification.peaks.ids.txt) ../ChIP-seq/metadata.tsv | cut -f1,46 > data/$modification/md5sum.txt
+>     cat data/$modification/md5sum.txt | \
+>     while read filename original_md5sum; do
+>         md5sum data/$modification/"$filename".bigBed | \
+>         awk -v filename="$filename" -v original_md5sum="$original_md5sum" 'BEGIN{FS=" ";OFS="\t"}{print filename, original_md5sum, $1}'
+>     done > tmp
+>     mv tmp data/$modification/md5sum.txt
+>     awk '$2!=$3' data/$modification/md5sum.txt
+> done
+H3K27ac
+H3K4me1
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cd data
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# ls
+H3K27ac  H3K4me1
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd H3K27ac
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K27ac# ls
+ENCFF872UHN.bigBed  ENCFF977LBD.bigBed  md5sum.txt
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K27ac# cat md5sum.txt
+ENCFF872UHN     2207b7b3378df7776e7ecdc2aa1a5de0        2207b7b3378df7776e7ecdc2aa1a5de0
+ENCFF977LBD     be29636550527e36c4755ea036531e75        be29636550527e36c4755ea036531e75
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K27ac# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd H3K4me1
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K4me1# ls
+ENCFF724ZOF.bigBed  ENCFF844XRN.bigBed  md5sum.txt
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K4me1# cat md5sum.txt
+ENCFF844XRN     de679228721fb4055aa1f657c77c21a6        de679228721fb4055aa1f657c77c21a6
+ENCFF724ZOF     c87fefbf41de3d291fa1d340a26627f5        c87fefbf41de3d291fa1d340a26627f5
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K4me1# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd ..
+
+##Converting bigBed files into BED files
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# for modification in H3K27ac H3K4me1
+$modification
+  > do
+>     echo $modification
+>     cut -f1 analyses/bigBed.$modification.peaks.ids.txt | \
+>     while read filename; do
+>         bigBedToBed data/$modification/"$filename".bigBed data/$modification/"$filename".bed
+>     done
+> done
+H3K27ac
+H3K4me1
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cd data
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# ls
+H3K27ac  H3K4me1
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd H3K27ac
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K27ac# ls
+ENCFF872UHN.bed  ENCFF872UHN.bigBed  ENCFF977LBD.bed  ENCFF977LBD.bigBed  md5sum.txt
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data/H3K27ac# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# ls H3K4me1
+ENCFF724ZOF.bed  ENCFF724ZOF.bigBed  ENCFF844XRN.bed  ENCFF844XRN.bigBed  md5sum.txt
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd ..
+
+#Get open accessible regions outside of gene body from prior ATAC-seq experimental located between H3K27ac and H3K4me1 peaks in human stomach and sigmid colon tissue:
+ 
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cut -f-2 analyses/bigBed.H3K27ac.peaks.ids.txt | \
+> while read filename tissue; do
+>     echo "$tissue"
+>     bedtools intersect -a ../ATAC-seq/analyses/peaks.analysis/peaks.outside.gene.body."$tissue".bed -b data/H3K27ac/"$filename".bed -u > data/overlap.peaks.H3K27ac."$tissue".bed
+> done
+sigmoid_colon
+stomach
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cut -f-2 analyses/bigBed.H3K4me1.peaks.ids.txt | \
+> while read filename tissue; do
+>     echo "$tissue"
+>     bedtools intersect -a data/overlap.peaks.H3K27ac."$tissue".bed -b data/H3K4me1/"$filename".bed -u > data/overlap.peaks.H3K27ac.H3K4me1."$tissue".bed
+> done
+sigmoid_colon
+stomach
+
+#Checking file existence
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cd data
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# ls
+H3K27ac  H3K4me1  overlap.peaks.H3K27ac.H3K4me1.sigmoid_colon.bed  overlap.peaks.H3K27ac.H3K4me1.stomach.bed  overlap.peaks.H3K27ac.sigmoid_colon.bed  overlap.peaks.H3K27ac.stomach.bed
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# wc -l overlap.peaks.H3K27ac.H3K4me1.*.bed
+  14215 overlap.peaks.H3K27ac.H3K4me1.sigmoid_colon.bed
+   8022 overlap.peaks.H3K27ac.H3K4me1.stomach.bed
+  22237 total
+
+PART 5.3:
+#Focus on regulatory elements that are located on chromosome 1, and generate a file regulatory.elements.starts.tsv that contains the name of the regulatory region 
+#(i.e. the name of the original ATAC-seq peak) and the start (5') coordinate of the region.
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/data# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/mkdir analyses/chromosome1
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/mkdir analyses/chromosome1/distance
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# for tissue in sigmoid_colon stomach
+> do
+>     echo $tissue
+>     grep -w chr1 data/overlap.peaks.H3K27ac.H3K4me1."$tissue".bed | \
+>     awk 'BEGIN{FS=OFS="\t"}{print $4, $2}' > analyses/chromosome1/regulatory.elements.starts."$tissue".tsv
+> done
+sigmoid_colon
+stomach
+
+PART 5.4:
+#Focus on protein-coding genes located on chromosome 1. From the BED file of gene body coordinates that you generated here, prepare a tab-separated file called gene.starts.tsv 
+#which will store the name of the gene in the first column, and the start coordinate of the gene on the second column (REMEMBER: for genes located on the minus strand, 
+#the start coordinate will be at the 3'). Use the command below as a starting point:
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# grep -w chr1 ../ATAC-seq/annotation/gencode.v24.protein.coding.gene.body.bed |
+> awk 'BEGIN{FS=OFS="\t"}{if ($6=="+"){start=$2} else {start=$3}; print $4, start}' > analyses/chromosome1/gene.starts.tsv
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses/chromosome1# ls
+distance  gene.starts.tsv  regulatory.elements.starts.sigmoid_colon.tsv  regulatory.elements.starts.stomach.tsv
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses/chromosome1# head gene.starts.tsv
+ENSG00000186092.4       69090
+ENSG00000279928.1       182392
+ENSG00000279457.3       200322
+ENSG00000278566.1       451678
+ENSG00000273547.1       686654
+ENSG00000187634.10      924879
+ENSG00000188976.10      959309
+ENSG00000187961.13      960586
+ENSG00000187583.10      966496
+ENSG00000187642.9       982093
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses/chromosome1# head regulatory.elements.starts.sigmoid_colon.tsv
+Peak_23845      817296
+Peak_54490      817296
+Peak_67130      817296
+Peak_22173      904265
+Peak_39088      904265
+Peak_21162      923679
+Peak_20098      1122088
+Peak_233916     1157380
+Peak_24251      1157380
+Peak_62286      1157380
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses/chromosome1# head regulatory.elements.starts.stomach.tsv
+Peak_25860      1067682
+Peak_68978      1067682
+Peak_19319      1068516
+Peak_24518      1068516
+Peak_24039      1079493
+Peak_25265      1079493
+Peak_38063      1079493
+Peak_32494      1124797
+Peak_106662     1125097
+Peak_127062     1125097
+
+
+#PART 5.5:
+#Download or copy this python script inside the epigenomics_uvic/bin folder.
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses/chromosome1# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements/analyses# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements#wget -P ../bin https://public-docs.crg.es/rguigo/Data/bborsari/UVIC/epigenomics_course/get.distance.py
+
+Resolving public-docs.crg.es (public-docs.crg.es)... 84.88.66.216
+Connecting to public-docs.crg.es (public-docs.crg.es)|84.88.66.216|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 1149 (1.1K) [text/plain]
+Saving to: '../bin/get.distance.py'
+
+get.distance.py                                      100%[===================================================================================================================>]   1.12K  --.-KB/s    in 0s
+
+2024-06-07 10:09:02 (23.2 MB/s) - '../bin/get.distance.py' saved [1149/1149]
+
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# python ../bin/get.distance.py -h
+Usage: get.distance.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -i INPUT, --input=INPUT
+  -s START, --start=START
+
+This script takes as input two distinct arguments: 1) --input corresponds to the file gene.starts.tsv (i.e. the file you generated in Task #4); 2) --start corresponds to the 5' coordinate of a regulatory element. Complete the python script so that for a given coordinate --start the script returns the closest gene, the start of the gene and the distance of the regulatory element.
+
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cd ../bin
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin# ls
+VennDiagram.4groups.R  boxplot.expression.R  download.metadata.sh  get.matrix.chipseq.sh  scatterplot.correlation.R  selectRows.sh
+aggregation.plot.R     discardRows.sh        get.distance.py       non.redundant.TSS.sh   selectColumns.sh
+
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin# cat get.distance.py
+#!/usr/bin/env python
+
+
+#************
+# LIBRARIES *
+#************
+
+import sys
+from optparse import OptionParser
+
+
+#*****************
+# OPTION PARSING *
+#*****************
+
+parser = OptionParser()
+parser.add_option("-i", "--input", dest="input")
+parser.add_option("-s", "--start", dest="start")
+options, args = parser.parse_args()
+
+open_input = open(options.input)
+enhancer_start = int(options.start)
+
+
+#********
+# BEGIN *
+#********
+
+x=1000000 # set maximum distance to 1 Mb
+selectedGene="" # initialize the gene as empty
+selectedGeneStart=0 # initialize the start coordinate of the gene as empty
+
+for line in open_input.readlines(): # for each line in the input file
+        gene, y = line.strip().split('\t') # split the line into two columns based on a tab
+        # define a variable called position that correspond to the integer of the start of the gene
+        # compute the absolute value of the difference between position and enhancer_start
+
+        # if this absolute value is lower than x
+                # this value will now be your current x
+                # save gene as selectedGene
+                # save position as selectedGeneStart
+
+print "\t".join([selectedGene, str(selectedGeneStart), str(x)])
+
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin# vi get.distance.py
+bash: vi: command not found
+
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin#nano get.distance.py
+
+
+
+#!/usr/bin/env python
+
+
+#************
+# LIBRARIES *
+#************
+
+import sys
+from optparse import OptionParser
+
+
+#*****************
+# OPTION PARSING *
+#*****************
+
+parser = OptionParser()
+parser.add_option("-i", "--input", dest="input")
+parser.add_option("-s", "--start", dest="start")
+options, args = parser.parse_args()
+
+open_input = open(options.input)
+enhancer_start = int(options.start)
+
+
+#********
+# BEGIN *
+#********
+
+x=1000000 # set maximum distance to 1 Mb
+selectedGene="" # initialize the gene as empty
+selectedGeneStart=0 # initialize the start coordinate of the gene as empty
+
+for line in open_input.readlines(): # for each line in the input file
+        gene, position = line.strip().split('\t') # split the line into two columns based on a tab
+        position = int(position)
+        distance  = abs(position - enhancer_start)
+        if distance < x:
+                x = distance
+                selectedGene = gene
+                selectedGeneStart = position
+        # define a variable called position that correspond to the integer of the start of the gene
+        # compute the absolute value of the difference between position and enhancer_start
+
+        # if this absolute value is lower than x
+                # this value will now be your current x
+                # save gene as selectedGene
+                # save position as selectedGeneStart
+
+print "\t".join([selectedGene, str(selectedGeneStart), str(x)])
+
+
+#Saving modified python program
+Control-O
+Enter
+Control-X
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# cd regulatory_elements
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements#
+
+#Testing the script: 
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# python ../bin/get.distance.py --input analyses/chromosome1/gene.starts.tsv --start 980000
+ENSG00000187642.9       982093  2093
+
+PART 5.6:
+#For each regulatory element contained in the file regulatory.elements.starts.tsv, retrieve the closest gene and the distance to the closest gene 
+#using the python script you created above. Use the command below as a starting point:
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# for tissue in sigmoid_colon stomach
+> do
+>     echo $tissue
+>     cat analyses/chromosome1/regulatory.elements.starts."$tissue".tsv | \
+>     while read element start; do
+>         python ../bin/get.distance.py --input analyses/chromosome1/gene.starts.tsv --start $start
+>     done > analyses/chromosome1/distance/regulatoryElements.genes.distances."$tissue".tsv
+> done
+sigmoid_colon
+stomach
+
+PART 5.7: 
+#Use R to compute the mean and the median of the distances stored in regulatoryElements.genes.distances.tsv
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# ls
+ATAC-seq  ChIP-seq  bin  docker  handsOn_images  install.dependecies.txt  regulatory_elements  test
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic# cd bin
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin# ls
+VennDiagram.4groups.R  boxplot.expression.R  download.metadata.sh  get.matrix.chipseq.sh  scatterplot.correlation.R  selectRows.sh
+aggregation.plot.R     discardRows.sh        get.distance.py       non.redundant.TSS.sh   selectColumns.sh
+
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin# R --version
+R version 3.5.2 (2018-12-20) -- "Eggshell Igloo"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under the terms of the
+GNU General Public License versions 2 or 3.
+For more information about these matters see
+http://www.gnu.org/licenses/.
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin# nano distance.R
+
+
+#WRITING R PROGRAM
+args <- commandArgs(trailingOnly = TRUE)
+calculated_distances_file <- args[1]
+df <- read.table(calculated_distances_file, header=FALSE, sep="\t")
+distances <- df[,3]
+mean_distance <- mean(distances, na.rm = TRUE)
+median_distance <- median(distances, na.rm = TRUE)
+print(paste0(mean_distance, "is the mean distance"))
+print(paste0(median_distance, "is the median distance"))
+
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/bin#cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic#cd ..
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements#chmod +x ../bin/distance.R
+#For colon
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# Rscript ../bin/distance.R analyses/chromosome1/distance/regulatoryElements.genes.distances.sigmoid_colon.tsv
+[1] "73635.8948060487is the mean distance"
+[1] "35802is the median distance"
+#For stomach
+root@e133f64fb6ae:/home/pwensel/epigenomics/epigenomics_uvic/regulatory_elements# Rscript ../bin/distance.R analyses/chromosome1/distance/regulatoryElements.genes.distances.stomach.tsv
+[1] "45227.0486322188is the mean distance"
+[1] "27735is the median distance"
+
